@@ -192,8 +192,9 @@
     css();
     var bar = document.createElement("div"); bar.className = "ms-bar";
     bar.innerHTML = '<button id="msBtn" class="p" type="button">🎙 المسمّع الآلي</button><span id="msStat" aria-live="polite"></span><label style="display:flex;gap:6px;align-items:center;font-size:13px;font-weight:400;margin:0;width:100%"><input type="checkbox" id="msOnline"> السماح بالتعرّف عبر الإنترنت إن لم تتوفر حزمة محلية (يُرسل الصوت إلى Google)</label>';
-    $("msOnline").checked = allowOnline();
-    $("msOnline").onchange = function () { try { localStorage.setItem("msOnline", this.checked ? "1" : "0"); } catch (e) {} };
+    var ck = bar.querySelector("#msOnline");
+    ck.checked = allowOnline();
+    ck.onchange = function () { try { localStorage.setItem("msOnline", this.checked ? "1" : "0"); } catch (e) {} };
     $("tjModes").parentNode.appendChild(bar);
     $("msBtn").onclick = function () { st.on ? stop() : start(); };
     $("tjModes").addEventListener("click", function () { setTimeout(syncBar, 0); });
