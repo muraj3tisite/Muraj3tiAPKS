@@ -33,7 +33,8 @@
     if (MUQ.test(n.replace(/ /g, ""))) return { w: n.replace(/ /g, "").split("").map(function (c) { return LN[c]; }), alt: n.replace(/ /g, "") };
     return { w: n.split(" ") };
   }
-  var BSM = "بسم الله الرحمن الرحيم";
+  var BSM = "بسم الله الرحمن الرحيم", BW = ["بسم", "الله", "الرحمن", "الرحيم"];
+  function isBsm(t) { return t.length >= 4 && BW.every(function (w, i) { return sk(t[i]) === sk(w); }); }
   /* مطابقة تقابلية بالبرمجة الديناميكية: كل كلمة متوقعة لا بد أن تُقابَل بالترتيب.
      النتيجة تنجح فقط إذا: لا كلمة محذوفة، والتشابه فوق العتبة، والزيادات قليلة. */
   function alignOk(exp, hyp) {
@@ -43,14 +44,14 @@
     for (i = 0; i <= n; i++) { D[i] = []; for (j = 0; j <= m; j++) D[i][j] = i === 0 ? j : Infinity; }
     for (i = 1; i <= n; i++) for (j = 1; j <= m; j++) {
       S = sim(exp[i - 1], hyp[j - 1]);
-      D[i][j] = Math.min(D[i][j - 1] + 1, S >= .8 ? D[i - 1][j - 1] + (1 - S) : Infinity);
+      D[i][j] = Math.min(D[i][j - 1] + 1, S >= .75 ? D[i - 1][j - 1] + (1 - S) : Infinity);
     }
     return D[n][m] <= maxIns + 0.6 * n * .25 && D[n][m] < Infinity;
   }
   /* يُرجع عدد كلمات الكلام المستهلكة إن طابقت الآية، وإلا 0. تُقبل بسملة قبل أول آية، وزيادة بعد الآية تُترك للتالية */
   function matchAyah(txt, said, allowBsm) {
     var ex = expectedWords(txt), h = norm(said).split(" ").filter(Boolean), off = 0, cand, k, hl;
-    if (allowBsm && h.slice(0, 4).join(" ") === BSM && h.length > 4) { off = 4; }
+    if (allowBsm && h.length > 4 && isBsm(h)) { off = 4; }
     h = h.slice(off);
     var n = ex.w.length;
     var tries = [ex.w]; if (ex.alt) tries.push([ex.alt]);
@@ -61,23 +62,32 @@
           return { used: off + k, n: hl };
       }
     }
+    /* ملاذ لأخطاء الفصل/الدمج في التعرّف (يوم الدين ↔ يومالدين): مقارنة النص كاملًا بتسامح ضيق جدًّا، فلا تمرّ كلمة ناقصة */
+    var js = sk(ex.w.join("")), hl2 = ex.w.length;
+    if (!ex.alt && js.length >= 8) for (k = Math.max(1, hl2 - 3); k <= Math.min(h.length, hl2 + 2); k++) {
+      var jh = sk(h.slice(0, k).join(""));
+      if (Math.abs(jh.length - js.length) <= 1 && lev(js, jh) / js.length <= (js.length >= 12 ? .04 : 0)) return { used: off + k, n: hl2 };
+    }
     return null;
   }
-  var API = { norm: norm, matchAyah: matchAyah, expectedWords: expectedWords, BSM: BSM };
+  var API = { norm: norm, matchAyah: matchAyah, expectedWords: expectedWords, BSM: BSM, isBsm: isBsm, sim: sim };
   if (typeof module !== "undefined" && module.exports) { module.exports = API; return; }
   G.Musammi = API;
 
   /* ===== 2) الواجهة والمحرك ===== */
   var $ = function (i) { return document.getElementById(i); };
   function allowOnline() { try { return localStorage.getItem("msOnline") === "1"; } catch (e) { return false; } }
-  var Q = null, st = { on: false, rec: null, list: [], i: 0, buf: "", t0: 0, tm: null, fails: 0, done: {} };
+  var Q = null, st = { on: false, rec: null, list: [], i: 0, buf: "", itx: "", iskip: 0, t0: 0, tm: null, fails: 0, errs: 0 };
+  function AQ(n) { return String(n).replace(/\d/g, function (d) { return "٠١٢٣٤٥٦٧٨٩"[d]; }); }
   function css() {
     var s = document.createElement("style");
     s.textContent = ".ms-bar{display:none;flex-wrap:wrap;gap:8px;align-items:center;margin-top:10px}.ms-bar.on{display:flex}" +
       "#msBtn{font-weight:800}#msBtn.live{background:#c0392b;border-color:#c0392b;color:#fff}" +
-      "#msStat{font-size:14px;flex:1;min-width:160px}#msStat.ok{color:var(--ok)}#msStat.bad{color:var(--warn)}" +
+      "#msStat{font-size:14px;flex:1;min-width:160px}#msStat.ok{color:var(--ok);font-weight:800}#msStat.bad{color:var(--warn);font-weight:800}" +
       ".ms-dot{display:inline-block;width:10px;height:10px;border-radius:50%;background:#c0392b;margin-inline-end:6px;animation:msP 1s infinite}" +
-      "@keyframes msP{50%{opacity:.25}}.tj-hideaya.ms-lock .aya-num{pointer-events:none}";
+      ".ms-pb{display:inline-block;width:90px;height:6px;border-radius:9px;background:var(--acc2);vertical-align:middle;margin-inline-start:8px;overflow:hidden}.ms-pb i{display:block;height:100%;background:var(--ok);transition:width .25s}" +
+      "@keyframes msP{50%{opacity:.25}}@keyframes msIn{from{opacity:.15;transform:scale(.98)}to{opacity:1;transform:none}}" +
+      ".ms-lock .aya-t.rev{animation:msIn .5s ease}.tj-hideaya.ms-lock .aya-num{pointer-events:none}";
     document.head.appendChild(s);
   }
   function stat(t, c) { var e = $("msStat"); if (e) { e.className = c || ""; e.innerHTML = t; } }
@@ -85,7 +95,7 @@
     if (Q) return cb(true);
     fetch("data/quran-text.json").then(function (r) { if (!r.ok) throw 0; return r.json(); }).then(function (j) {
       Q = {}; Object.keys(j).forEach(function (k) {
-        var t = j[k]; if (/:1$/.test(k) && k !== "1:1" && k !== "9:1") { var n = norm(t); if (n.indexOf(BSM) === 0 && n.length > BSM.length + 2) t = t.split(/\s+/).slice(4).join(" "); }
+        var t = j[k]; if (/:1$/.test(k) && k !== "1:1" && k !== "9:1") { var w = norm(t).split(" "); if (isBsm(w) && w.length > 4) t = t.trim().split(/\s+/).slice(4).join(" "); }
         Q[k] = t;
       }); cb(true);
     }).catch(function () { cb(false); });
@@ -102,64 +112,86 @@
     var h = $("tjHideAya"); if (h) h.disabled = true;
   }
   function unlock() { var sh = $("mushafSheet"); if (sh) sh.classList.remove("ms-lock"); var h = $("tjHideAya"); if (h) h.disabled = false; }
-  /* لا كشف يدوي للآيات أثناء المسمّع الآلي: لا ثغرة بالنقر على رقم الآية */
+  /* لا كشف يدوي للآيات أثناء المسمّع الآلي */
   document.addEventListener("click", function (e) { if (st.on && e.target.closest && e.target.closest("#mushafText .aya-num")) { e.stopImmediatePropagation(); e.preventDefault(); } }, true);
 
+  function toks(s) { var n = norm(s); return n ? n.split(" ") : []; }
+  function attempt() { return toks(st.buf).concat(toks(st.itx).slice(st.iskip)); }
+  function allowB(k) { return /:1$/.test(k) && k !== "1:1"; }
+  function strip(h, k) { return allowB(k) && h.length > 4 && isBsm(h) ? h.slice(4) : h; }
+  /* عدد الكلمات الصحيحة المتتالية من أول الآية (لا يكشف نصّها) */
+  function progress(ex, h) { var i = 0; for (var j = 0; j < h.length && i < ex.length; j++) if (sim(ex[i], h[j]) >= .75) i++; return i; }
+  function showProg(pr, n, k) {
+    stat('<span class="ms-dot"></span>الآية ' + AQ(k.split(":")[1]) + " — " + AQ(pr) + " من " + AQ(n) + ' كلمة<span class="ms-pb"><i style="width:' + Math.round(100 * pr / n) + '%"></i></span>');
+  }
   function resetPage() {
-    st.list = pageAyat().filter(function (k) { return Q && Q[k]; }); st.i = 0; st.buf = ""; st.fails = 0;
+    st.list = pageAyat().filter(function (k) { return Q && Q[k]; }); st.i = 0; st.buf = ""; st.itx = ""; st.iskip = 0; st.fails = 0; st.errs = 0; st.t0 = Date.now();
     if (st.on) { lock(); prompt(); }
   }
   function prompt() {
-    if (st.i >= st.list.length) { stat("✓ أتممتَ الصفحة كلها بلا خطأ. اضغط «أنهيت…» لتسجيلها.", "ok"); stop(true); return; }
-    stat('<span class="ms-dot"></span>اقرأ الآية ' + AQ(st.list[st.i].split(":")[1]) + " من هذه الصفحة…");
+    if (!st.on || st.i >= st.list.length) return;
+    var k = st.list[st.i]; showProg(0, expectedWords(Q[k]).w.length, k);
   }
-  function AQ(n) { return String(n).replace(/\d/g, function (d) { return "٠١٢٣٤٥٦٧٨٩"[d]; }); }
   function judge(final) {
     if (!st.on || st.i >= st.list.length) return;
-    var k = st.list[st.i], r = matchAyah(Q[k], st.buf, st.i === 0 || /:1$/.test(k));
-    var secs = (Date.now() - st.t0) / 1000;
-    /* حدّ أدنى للزمن يمنع النجاح بكلمة سريعة/ضجيج: ٠٫١٨ ثانية للكلمة */
-    if (r && secs < r.n * .18) r = null;
-    if (r) {
-      var left = norm(st.buf).split(" ").slice(r.used).join(" ");
-      reveal(k); st.i++; st.fails = 0; st.buf = left; st.t0 = Date.now(); stat("✓ صحيحة", "ok");
-      if (left) { clearTimeout(st.tm); judge(false); } else setTimeout(prompt, 700);
-      return;
-    }
-    if (final) {
-      st.fails++; st.buf = ""; st.t0 = Date.now();
-      /* الخطأ: لا تُكشف الآية ولا تُذكر الكلمة الخاطئة */
-      stat("✗ غير صحيحة — أعد الآية " + AQ(k.split(":")[1]) + " (محاولة " + AQ(st.fails) + ")", "bad");
-    }
+    var k = st.list[st.i], at = attempt(), r = matchAyah(Q[k], at.join(" "), allowB(k));
+    /* حدّ أدنى للزمن منذ بدء الآية: ٠٫١٥ ثانية للكلمة، فلا ينجح ضجيج أو نطق مستحيل السرعة */
+    if (r && (Date.now() - st.t0) / 1000 < r.n * .15) r = null;
+    if (r) return pass(k, at, r);
+    var ex = expectedWords(Q[k]).w, pr = progress(ex, strip(at, k));
+    if (!final) { if (at.length) showProg(pr, ex.length, k); return; }
+    if (!at.length) return;
+    st.fails++; st.errs++; st.buf = ""; st.itx = ""; st.iskip = 0; st.t0 = Date.now();
+    /* الخطأ: الآية تبقى مخفية، ويُذكر موضع التعثّر فقط */
+    stat("✗ غير صحيحة — تعثّرتَ عند الكلمة " + AQ(pr + 1) + ". أعد الآية " + AQ(k.split(":")[1]) + " من أولها", "bad");
   }
-  function onSpeech(text) {
-    if (!st.buf) st.t0 = st.t0 || Date.now();
-    st.buf = (st.buf + " " + text).trim(); judge(false);
-    clearTimeout(st.tm); st.tm = setTimeout(function () { judge(true); }, 2400);
+  function pass(k, at, r) {
+    var b = toks(st.buf).length, rest = at.slice(r.used);
+    if (r.used <= b) st.buf = toks(st.buf).slice(r.used).join(" "); else { st.iskip += r.used - b; st.buf = ""; }
+    reveal(k); st.i++; st.fails = 0; st.t0 = Date.now() - rest.length * 250;
+    if (st.i >= st.list.length) return done();
+    stat("✓ صحيحة", "ok"); setTimeout(prompt, 700);
+    if (rest.length) judge(false);
   }
-  /* المحرك: يُفضَّل محرك محلي مخصص (window.MusammiEngine)، ثم تعرّف الجهاز بلا شبكة. لا اتصال بالإنترنت أبدًا ما لم يُسمح صراحة */
+  function done() {
+    var m = st.errs;
+    stat("✓ أتممتَ الصفحة — " + (m ? "تعثّرتَ " + AQ(m) + " مرة" : "بلا أي تعثّر") + ". اضغط «أنهيت…» لتسجيلها.", "ok");
+    try { if (G.S) { G.S.tas = G.S.tas || {}; G.S.tas[G.tjState.pg] = { d: G.dkey(new Date()), ok: m ? 0 : 1 }; G.save(); } } catch (e) {}
+    stop(true);
+  }
+  function onSpeech(t, fin) {
+    if (!st.on) return;
+    if (fin) { st.buf = toks(st.buf).concat(toks(t).slice(st.iskip)).join(" "); st.itx = ""; st.iskip = 0; } else st.itx = t;
+    judge(false);
+    clearTimeout(st.tm); st.tm = setTimeout(function () { judge(true); }, fin ? 1800 : 2600);
+  }
+  function bestAlt(alts) {
+    var k = st.list[st.i]; if (!k) return alts[0];
+    for (var j = 0; j < alts.length; j++) if (matchAyah(Q[k], toks(st.buf).concat(toks(alts[j]).slice(st.iskip)).join(" "), allowB(k))) return alts[j];
+    return alts[0];
+  }
+  /* المحرك: محلي مخصص (window.MusammiEngine) ثم تعرّف الجهاز. الإنترنت لا يُستخدم إلا بإذن صريح */
   function engine() {
     if (G.MusammiEngine) return G.MusammiEngine;
     var SR = G.SpeechRecognition || G.webkitSpeechRecognition; if (!SR) return null;
-    var r = new SR(); r.lang = "ar-SA"; r.continuous = true; r.interimResults = false; r.maxAlternatives = 3;
+    var r = new SR(); r.lang = "ar-SA"; r.continuous = true; r.interimResults = true; r.maxAlternatives = 3;
     if ("processLocally" in r) r.processLocally = true; else if (!allowOnline()) return null;
     return { start: function (cb, onEnd) {
-      r.onresult = function (e) { for (var i = e.resultIndex; i < e.results.length; i++) if (e.results[i].isFinal) {
-        var alts = [].map.call(e.results[i], function (a) { return a.transcript; });
-        var pick = alts[0], k = st.list[st.i];
-        if (k) for (var j = 0; j < alts.length; j++) if (matchAyah(Q[k], (st.buf + " " + alts[j]).trim(), st.i === 0 || /:1$/.test(k))) { pick = alts[j]; break; }
-        cb(pick);
+      r.onresult = function (e) { for (var i = e.resultIndex; i < e.results.length; i++) {
+        var res = e.results[i];
+        if (res.isFinal) cb(bestAlt([].map.call(res, function (a) { return a.transcript; })), true); else cb(res[0].transcript, false);
       } };
       r.onerror = function (e) { onEnd(e.error); }; r.onend = function () { onEnd(); };
       r.start();
     }, stop: function () { try { r.abort(); } catch (e) {} },
     ready: function (cb) {
       if (!G.SpeechRecognition || !G.SpeechRecognition.available) return cb(true);
+      var fb = function (why) { if (allowOnline()) { r.processLocally = false; return cb(true); } cb(false, why); };
       G.SpeechRecognition.available({ langs: ["ar-SA"], processLocally: true }).then(function (s) {
         if (s === "available") return cb(true);
-        if (s === "unavailable") { if (allowOnline()) { r.processLocally = false; return cb(true); } return cb(false, "حزمة العربية للتعرّف الصوتي غير متاحة على هذا الجهاز. فعّل «السماح بالإنترنت» أو نزّل حزمة العربية دون اتصال في إعدادات الهاتف."); }
+        if (s === "unavailable") return fb("حزمة العربية للتعرّف الصوتي غير متاحة على هذا الجهاز. فعّل «السماح بالإنترنت» أو نزّل حزمة العربية دون اتصال في إعدادات الهاتف.");
         stat("جارٍ تنزيل حزمة التعرّف على العربية (مرة واحدة)…");
-        G.SpeechRecognition.install({ langs: ["ar-SA"], processLocally: true }).then(function (ok) { if (!ok && allowOnline()) { r.processLocally = false; return cb(true); } cb(!!ok, "تعذّر تنزيل الحزمة"); }, function () { if (allowOnline()) { r.processLocally = false; return cb(true); } cb(false, "تعذّر تنزيل الحزمة"); });
+        G.SpeechRecognition.install({ langs: ["ar-SA"], processLocally: true }).then(function (ok) { ok ? cb(true) : fb("تعذّر تنزيل الحزمة"); }, function () { fb("تعذّر تنزيل الحزمة"); });
       }, function () { cb(true); });
     } };
   }
@@ -172,7 +204,7 @@
         if (!good) return stat(why || "المحرك غير جاهز", "bad");
         st.rec = en; st.on = true; $("msBtn").classList.add("live"); $("msBtn").textContent = "⏹ إيقاف";
         resetPage();
-        var run = function () { en.start(onSpeech, function (err) {
+        var run = function () { st.itx = ""; st.iskip = 0; en.start(onSpeech, function (err) {
           if (!st.on) return;
           if (err === "not-allowed" || err === "service-not-allowed") { stat("اسمح للموقع باستخدام الميكروفون.", "bad"); return stop(); }
           if (err === "network" || err === "language-not-supported") { stat("لا يعمل التعرّف الآن دون إنترنت. نزّل حزمة العربية دون اتصال في إعدادات الهاتف، أو اتصل بالإنترنت وفعّل «السماح بالإنترنت».", "bad"); return stop(); }
@@ -186,14 +218,13 @@
     var b = $("msBtn"); if (b) { b.classList.remove("live"); b.textContent = "🎙 المسمّع الآلي"; }
     unlock(); if (!keep) stat("");
   }
-  function syncBar() { var b = document.querySelector(".ms-bar"), m = G.tjState && tjState.mode; if (b) b.classList.toggle("on", m === "review" || m === "tasmee"); if (m === "study" && st.on) stop(); }
+  function syncBar() { var b = document.querySelector(".ms-bar"), m = G.tjState && G.tjState.mode; if (b) b.classList.toggle("on", m === "review" || m === "tasmee"); if (m === "study" && st.on) stop(); }
   function init() {
     if (!$("tjModes") || $("msBtn")) return;
     css();
     var bar = document.createElement("div"); bar.className = "ms-bar";
     bar.innerHTML = '<button id="msBtn" class="p" type="button">🎙 المسمّع الآلي</button><span id="msStat" aria-live="polite"></span><label style="display:flex;gap:6px;align-items:center;font-size:13px;font-weight:400;margin:0;width:100%"><input type="checkbox" id="msOnline"> السماح بالتعرّف عبر الإنترنت إن لم تتوفر حزمة محلية (يُرسل الصوت إلى Google)</label>';
-    var ck = bar.querySelector("#msOnline");
-    ck.checked = allowOnline();
+    var ck = bar.querySelector("#msOnline"); ck.checked = allowOnline();
     ck.onchange = function () { try { localStorage.setItem("msOnline", this.checked ? "1" : "0"); } catch (e) {} };
     $("tjModes").parentNode.appendChild(bar);
     $("msBtn").onclick = function () { st.on ? stop() : start(); };
