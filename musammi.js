@@ -69,6 +69,7 @@
 
   /* ===== 2) الواجهة والمحرك ===== */
   var $ = function (i) { return document.getElementById(i); };
+  function allowOnline() { try { return localStorage.getItem("msOnline") === "1"; } catch (e) { return false; } }
   var Q = null, st = { on: false, rec: null, list: [], i: 0, buf: "", t0: 0, tm: null, fails: 0, done: {} };
   function css() {
     var s = document.createElement("style");
@@ -141,7 +142,7 @@
     if (G.MusammiEngine) return G.MusammiEngine;
     var SR = G.SpeechRecognition || G.webkitSpeechRecognition; if (!SR) return null;
     var r = new SR(); r.lang = "ar-SA"; r.continuous = true; r.interimResults = false; r.maxAlternatives = 3;
-    if ("processLocally" in r) r.processLocally = true; else if (!G.MUSAMMI_ALLOW_ONLINE) return null;
+    if ("processLocally" in r) r.processLocally = true; else if (!allowOnline()) return null;
     return { start: function (cb, onEnd) {
       r.onresult = function (e) { for (var i = e.resultIndex; i < e.results.length; i++) if (e.results[i].isFinal) {
         var alts = [].map.call(e.results[i], function (a) { return a.transcript; });
@@ -156,9 +157,9 @@
       if (!G.SpeechRecognition || !G.SpeechRecognition.available) return cb(true);
       G.SpeechRecognition.available({ langs: ["ar-SA"], processLocally: true }).then(function (s) {
         if (s === "available") return cb(true);
-        if (s === "unavailable") return cb(false, "حزمة العربية للتعرّف الصوتي غير متاحة على هذا الجهاز");
+        if (s === "unavailable") { if (allowOnline()) { r.processLocally = false; return cb(true); } return cb(false, "حزمة العربية للتعرّف الصوتي غير متاحة على هذا الجهاز. فعّل «السماح بالإنترنت» أو نزّل حزمة العربية دون اتصال في إعدادات الهاتف."); }
         stat("جارٍ تنزيل حزمة التعرّف على العربية (مرة واحدة)…");
-        G.SpeechRecognition.install({ langs: ["ar-SA"], processLocally: true }).then(function (ok) { cb(!!ok, "تعذّر تنزيل الحزمة"); }, function () { cb(false, "تعذّر تنزيل الحزمة"); });
+        G.SpeechRecognition.install({ langs: ["ar-SA"], processLocally: true }).then(function (ok) { if (!ok && allowOnline()) { r.processLocally = false; return cb(true); } cb(!!ok, "تعذّر تنزيل الحزمة"); }, function () { if (allowOnline()) { r.processLocally = false; return cb(true); } cb(false, "تعذّر تنزيل الحزمة"); });
       }, function () { cb(true); });
     } };
   }
@@ -174,7 +175,7 @@
         var run = function () { en.start(onSpeech, function (err) {
           if (!st.on) return;
           if (err === "not-allowed" || err === "service-not-allowed") { stat("اسمح للموقع باستخدام الميكروفون.", "bad"); return stop(); }
-          if (err === "network") { stat("هذا المحرك يحتاج إنترنت؛ لن يُستخدم. ثبّت حزمة العربية على الجهاز.", "bad"); return stop(); }
+          if (err === "network" || err === "language-not-supported") { stat("لا يعمل التعرّف الآن دون إنترنت. نزّل حزمة العربية دون اتصال في إعدادات الهاتف، أو اتصل بالإنترنت وفعّل «السماح بالإنترنت».", "bad"); return stop(); }
           setTimeout(run, 250); }); };
         run();
       });
@@ -190,7 +191,9 @@
     if (!$("tjModes") || $("msBtn")) return;
     css();
     var bar = document.createElement("div"); bar.className = "ms-bar";
-    bar.innerHTML = '<button id="msBtn" class="p" type="button">🎙 المسمّع الآلي</button><span id="msStat" aria-live="polite"></span>';
+    bar.innerHTML = '<button id="msBtn" class="p" type="button">🎙 المسمّع الآلي</button><span id="msStat" aria-live="polite"></span><label style="display:flex;gap:6px;align-items:center;font-size:13px;font-weight:400;margin:0;width:100%"><input type="checkbox" id="msOnline"> السماح بالتعرّف عبر الإنترنت إن لم تتوفر حزمة محلية (يُرسل الصوت إلى Google)</label>';
+    $("msOnline").checked = allowOnline();
+    $("msOnline").onchange = function () { try { localStorage.setItem("msOnline", this.checked ? "1" : "0"); } catch (e) {} };
     $("tjModes").parentNode.appendChild(bar);
     $("msBtn").onclick = function () { st.on ? stop() : start(); };
     $("tjModes").addEventListener("click", function () { setTimeout(syncBar, 0); });
