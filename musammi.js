@@ -390,12 +390,14 @@
     if (!$("tjModes") || $("msBtn")) return;
     if (G.MRobot) G.MRobot.css();
     css(); fabInit();
+    /* زر إخفاء/إظهار الآيات: الكلمات المكشوفة بالمسمّع تُمسح أولًا، وإلا بقيت ظاهرة رغم الإخفاء */
+    var hb = $("tjHideAya"); if (hb) hb.addEventListener("click", function () { clearRev(); });
     document.addEventListener("mrobot", function () { st.g = ""; paintRobot(); });
     $("tjModes").addEventListener("click", function () { setTimeout(syncBar, 0); });
     var fin = $("tjFin"); if (fin && G.ResizeObserver) new ResizeObserver(function () { document.documentElement.style.setProperty("--ms-fin", fin.offsetHeight + "px"); }).observe(fin);
     var q = $("t-qurani"); if (q && G.MutationObserver) new MutationObserver(syncBar).observe(q, { attributes: true, attributeFilter: ["class"] });
     var o = G.tjRenderPage; G.tjRenderPage = function () { var r = o.apply(this, arguments); if (st.on) resetPage(); return r; };
-    var s0 = G.tjSetMode; G.tjSetMode = function () { var r = s0.apply(this, arguments); syncBar(); return r; };
+    var s0 = G.tjSetMode; G.tjSetMode = function () { clearRev(); var r = s0.apply(this, arguments); syncBar(); return r; };
     syncBar();
   }
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init); else init();
