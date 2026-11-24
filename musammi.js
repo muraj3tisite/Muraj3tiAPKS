@@ -86,10 +86,6 @@
       ".ms-bar.on{display:flex}#msBtn{width:66px;height:66px;border-radius:50%;font-size:25px;font-weight:900;box-shadow:0 8px 26px rgba(0,0,0,.25);display:grid;place-items:center;padding:0}" +
       "#msBtn.live{border-radius:18px;background:#c0392b;border-color:#c0392b;color:#fff;width:60px;height:60px}" +
       "#msStat{position:absolute;right:0;bottom:76px;white-space:nowrap;background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:12px;padding:6px 10px;font-size:12px;box-shadow:0 4px 16px rgba(0,0,0,.12)}" +
-      ".ms-robot{position:absolute;right:7px;bottom:75px;width:48px;height:48px;border-radius:50%;background:var(--card);border:2px solid var(--acc);display:grid;place-items:center;font-size:27px;box-shadow:0 4px 14px rgba(0,0,0,.18)}" +
-      ".ms-robot:after{content:attr(data-name);position:absolute;right:52px;white-space:nowrap;font-size:12px;font-weight:800;color:var(--ink);background:var(--card);padding:5px 8px;border-radius:9px;border:1px solid var(--line)}" +
-      ".ms-mentor{display:flex;align-items:center;gap:12px;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:10px 14px;margin:10px 0;color:var(--ink)}" +
-      ".ms-mentor .ms-face{font-size:30px}.ms-mentor b{display:block;margin-bottom:3px}" +
       ".tj-hideaya .aya-t .qw{color:transparent!important;text-shadow:none!important}" +
       ".tj-hideaya .aya-t .qw.ms-word-rev{color:inherit!important;text-shadow:none!important}" +
       ".ms-lock .aya-t .qw.ms-word-rev{animation:msIn .22s ease}" +
@@ -223,14 +219,18 @@
       r.start();
     }, stop: function () { try { r.abort(); } catch (e) {} },
     ready: function (cb) {
-      if (!G.SpeechRecognition || !G.SpeechRecognition.available) return cb(true);
-      var fb = function (why) { if (allowOnline()) { r.processLocally = false; return cb(true); } cb(false, why); };
-      G.SpeechRecognition.available({ langs: ["ar-SA"], processLocally: true }).then(function (s) {
-        if (s === "available") return cb(true);
-        if (s === "unavailable") return fb("حزمة العربية للتعرّف الصوتي غير متاحة على هذا الجهاز. فعّل «السماح بالإنترنت» أو نزّل حزمة العربية دون اتصال في إعدادات الهاتف.");
-        stat("جارٍ تنزيل حزمة التعرّف على العربية (مرة واحدة)…");
-        G.SpeechRecognition.install({ langs: ["ar-SA"], processLocally: true }).then(function (ok) { ok ? cb(true) : fb("تعذّر تنزيل الحزمة"); }, function () { fb("تعذّر تنزيل الحزمة"); });
-      }, function () { cb(true); });
+      var NativeSR = G.SpeechRecognition || G.webkitSpeechRecognition;
+      if (!NativeSR || !NativeSR.available) {
+        if (allowOnline()) { if ("processLocally" in r) r.processLocally = false; return cb(true); }
+        return cb(false, "هذا المتصفح لا يدعم حزم التعرف الصوتي المحلية. جرّب Chrome محدّثًا على Android.");
+      }
+      NativeSR.available({ langs: ["ar-SA"], processLocally: true }).then(function (status) {
+        if (status === "available") { r.processLocally = true; return cb(true); }
+        if (allowOnline()) { r.processLocally = false; return cb(true); }
+        cb(false, status === "unavailable"
+          ? "حزمة العربية غير متاحة للتنزيل من هذا المتصفح أو الجهاز. جرّب Chrome على Android."
+          : "حزمة العربية غير مثبتة. افتح الإعدادات واضغط «تنزيل حزمة العربية» أولًا.");
+      }).catch(function () { cb(false, "تعذّر فحص حزمة العربية. افتح الإعدادات وحاول تنزيلها."); });
     } };
   }
   function start() {
@@ -267,26 +267,48 @@
     if (!$("tjModes") || $("msBtn")) return;
     css();
     var bar = document.createElement("div"); bar.className = "ms-bar";
-    bar.innerHTML = '<div class="ms-robot" id="msRobot" aria-hidden="true" data-name="مازن">🤖</div><span id="msStat" aria-live="polite"></span><button id="msBtn" class="p" type="button" aria-label="بدء التسميع">🎙</button>';
+    bar.innerHTML = '<span id="msStat" aria-live="polite"></span><button id="msBtn" class="p" type="button" aria-label="بدء التسميع">🎙</button>';
     document.body.appendChild(bar);
     $("msBtn").onclick = function () { st.on ? stop() : start(); };
     $("tjModes").addEventListener("click", function () { setTimeout(syncBar, 0); });
     var o = G.tjRenderPage; G.tjRenderPage = function () { var r = o.apply(this, arguments); if (st.on) resetPage(); return r; };
     var s0 = G.tjSetMode; G.tjSetMode = function () { var r = s0.apply(this, arguments); syncBar(); return r; };
-    function mentor() {
-      var profile=G.S||{}, girl=profile.ch==="girl", who=girl?"عائشة":"مازن";
-      var old=$("msMentor"); if(old)old.remove();
-      var main=$("mainWrap"), head=main&&main.querySelector("header");
-      if(!head)return;
-      var box=document.createElement("div"); box.id="msMentor"; box.className="ms-mentor";
-      box.innerHTML='<span class="ms-face" aria-hidden="true">🤖</span><span><b>أنا '+who+'، صديقك في المراجعة!</b>'+ (girl?'أهلًا بكِ! كل آية تحفظينها خطوة جميلة، تابعي بثقة 🌷':'أهلًا بك! كل آية تحفظها خطوة جميلة، تابع بثقة ⭐') +'</span>';
-      head.insertAdjacentElement("afterend",box);
-      var robot=$("msRobot"); if(robot)robot.setAttribute("data-name",who);
+    var installBtn = $("msInstallBtn"), installMsg = $("msInstallMsg");
+    function installStatus(msg, bad) {
+      if (installMsg) { installMsg.textContent = msg; installMsg.style.color = bad ? "#c0392b" : "var(--ink)"; }
     }
-    mentor();
-    document.addEventListener("click",function(e){
-      if(e.target.closest('nav button, #accBtn, #goBtn, #authGo'))setTimeout(mentor,150);
-    });
+    if (installBtn) installBtn.onclick = function () {
+      var NativeSR = G.SpeechRecognition || G.webkitSpeechRecognition;
+      if (!NativeSR || !NativeSR.available || !NativeSR.install) {
+        installStatus("هذا المتصفح لا يتيح تنزيل حزم اللغة من داخل المواقع. جرّب Chrome محدّثًا على Android، أو استخدم متصفحًا يدعم تنزيل حزم التعرف الصوتي.", true);
+        return;
+      }
+      installBtn.disabled = true;
+      installStatus("جارٍ التحقق من حزمة اللغة العربية…");
+      NativeSR.available({ langs: ["ar-SA"], processLocally: true }).then(function (status) {
+        if (status === "available") {
+          try { localStorage.setItem("msArabicPack", "1"); } catch (e) {}
+          installStatus("حزمة العربية مثبتة وجاهزة للتسميع ✓");
+          return true;
+        }
+        if (status === "unavailable") {
+          installStatus("حزمة العربية غير متاحة للتنزيل على هذا الجهاز أو المتصفح.", true);
+          return false;
+        }
+        installStatus("جارٍ تنزيل حزمة اللغة العربية. اترك التطبيق مفتوحًا حتى يكتمل التنزيل…");
+        return NativeSR.install({ langs: ["ar-SA"] }).then(function (ok) {
+          if (ok) {
+            try { localStorage.setItem("msArabicPack", "1"); } catch (e) {}
+            installStatus("تم تنزيل حزمة العربية بنجاح. يمكنك الآن بدء التسميع ✓");
+            return true;
+          }
+          installStatus("لم يكتمل تنزيل الحزمة. تحقق من اتصال الإنترنت والمساحة المتاحة ثم أعد المحاولة.", true);
+          return false;
+        });
+      }).catch(function () {
+        installStatus("تعذّر تنزيل حزمة العربية. تأكد من اتصال الإنترنت وحدّث Chrome ثم أعد المحاولة.", true);
+      }).then(function () { installBtn.disabled = false; }, function () { installBtn.disabled = false; });
+    };
     syncBar();
   }
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init); else init();
