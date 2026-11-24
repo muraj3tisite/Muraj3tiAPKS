@@ -293,8 +293,8 @@ main:has(#t-qurani:not(.hide)){max-width:900px;padding-left:4px;padding-right:4p
 @media(prefers-reduced-motion:reduce){.chb,.ring,.spk{animation:none}}
 .exs{display:flex;gap:12px;align-items:center;margin:12px 0}.exs svg{flex:none}.exs p{margin:2px 0 0}
 .seg button svg{display:block;margin:0 auto}
-.tj-fin{position:sticky;bottom:8px;z-index:5;display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;background:var(--card);border:2px solid var(--ok);border-radius:14px;padding:8px 12px;margin-top:10px;box-shadow:0 6px 20px rgba(0,0,0,.2)}
-.tj-fin.hide{display:none}.fin-ok{display:flex;align-items:center;gap:8px}
+.tj-fin{position:fixed;left:0;right:0;bottom:calc(8px + env(safe-area-inset-bottom,0px));width:calc(100% - 16px);max-width:720px;margin:0 auto!important;z-index:40;display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;background:var(--card);border:2px solid var(--ok);border-radius:14px;padding:8px 12px;margin-top:10px;box-shadow:0 6px 20px rgba(0,0,0,.2)}
+#t-qurani{padding-bottom:92px}.tj-fin.hide{display:none}.fin-ok{display:flex;align-items:center;gap:8px}
 
 /* ===== خيارات شكل صفحات المصحف (من الإعدادات) ===== */
 html[data-mp="cream"] :is(.mushaf-sheet,.mp-prev){--pg:#fffdf6;--tj-lazim:#8f0d24;--tj-wajib:#e0282d;--tj-jawaz:#e56a00;--tj-madd2:#a36b00;--tj-ghunna:#1e8a3c;--tj-gray:#8f8f8f;--tj-tafkhim:#1e3a8a;--tj-qalqala:#1f7fd0;--pink:#0b1a33;--pmut:#5a6b85;--mk-fill:#fffdf3;--mk-ink:#14451f;--gold:#b8923a;}
@@ -1788,5 +1788,5 @@ g("setBtn").addEventListener("click",open);g("setBtn2").addEventListener("click"
 })();
 </script>
 
-<script src="musammi.js?v=3"></script>
+<script src="musammi.js?v=5"></script>
 </body></html>
