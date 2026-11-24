@@ -52,7 +52,11 @@
     ".rg h2{margin:0 0 2px;font-size:19px}" +
     ".rg-who{margin:0 0 8px;font-size:13px;color:var(--mut)}" +
     ".rg-msg{margin:0;font-weight:600;line-height:1.7;background:var(--acc2);border:1px solid var(--acc);border-radius:14px;padding:8px 12px}" +
-    ".rg-hint{margin:6px 0 0;font-size:12px;color:var(--mut)}";
+    ".rg-hint{margin:6px 0 0;font-size:12px;color:var(--mut)}" +
+    ".rn{position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 10px);transform:translate(-50%,-140%);width:min(460px,calc(100% - 20px));box-sizing:border-box;z-index:200;display:flex;gap:10px;align-items:center;background:var(--card);color:var(--ink);border:2px solid var(--acc);border-radius:18px;padding:10px 14px;box-shadow:0 10px 30px rgba(0,0,0,.3);transition:transform .5s cubic-bezier(.22,1.25,.36,1),opacity .3s;opacity:0;cursor:pointer}" +
+    ".rn.on{transform:translate(-50%,0);opacity:1}" +
+    ".rn svg{flex:none}.rn-t{min-width:0;font-size:14px;line-height:1.7}.rn-t b{display:block;font-size:15px}" +
+    ".rn-two{display:flex;flex:none;margin-inline-end:-10px}.rn-two svg+svg{margin-inline-start:-14px}";
 
   function injectCss() {
     if (document.getElementById("rbCss")) return;
@@ -89,14 +93,46 @@
       '<p class="rg-msg">' + m + '</p><p class="rg-hint">اضغط لرسالة أخرى</p></div>';
   }
 
+
+  /* ===== إشعار الترحيب عند كل فتح للتطبيق ===== */
+  var HELLO = [
+    ["جاهز لأسمعك اليوم. بسم الله نبدأ!", "جاهزة لأسمعك اليوم. بسم الله نبدأ!"],
+    ["مراجعة اليوم تثبّت حفظ الغد. أنا معك!", "مراجعة اليوم تثبّت حفظ الغد. أنا معك!"],
+    ["يسعدني رجوعك. خطوة صغيرة اليوم تكفي.", "يسعدني رجوعك. خطوة صغيرة اليوم تكفي."],
+    ["افتح المصحف وسمّع لي، وأنا أتابعك كلمةً كلمة.", "افتحي المصحف وسمّعي لي، وأنا أتابعك كلمةً كلمة."]
+  ];
+  var nt = null;
+  function seen() { try { return localStorage.getItem("mrbSeen") === "1"; } catch (e) { return false; } }
+  function mark() { try { localStorage.setItem("mrbSeen", "1"); } catch (e) {} }
+  function hideNote() { if (!nt) return; var n = nt; nt = null; n.classList.remove("on"); setTimeout(function () { n.remove(); }, 600); }
+  function notify() {
+    if (!document.body || nt) return;
+    injectCss();
+    var w = who(), f = w.g === "f", first = !seen(), h = new Date().getHours(),
+      hi = h >= 4 && h < 12 ? "صباح الخير" : (h >= 18 || h < 4 ? "مساء الخير" : "أهلًا بك"), html;
+    if (first) {
+      html = '<span class="rn-two">' + svg("m", 52, "") + svg("f", 52, "") + '</span><div class="rn-t"><b>أهلًا بك في مراجعتي!</b>نحن <b style="display:inline">مازن</b> و<b style="display:inline">عائشة</b>، سنرافقك في المراجعة والتسميع.</div>';
+    } else {
+      html = svg(w.g, 52, "") + '<div class="rn-t"><b>' + hi + (w.n ? " يا " + esc(w.n) : "") + '</b>' + NAME[w.g] + ": " + HELLO[Math.floor(Math.random() * HELLO.length)][f ? 1 : 0] + "</div>";
+    }
+    nt = document.createElement("div"); nt.className = "rn"; nt.setAttribute("role", "status"); nt.innerHTML = html;
+    nt.addEventListener("click", hideNote);
+    document.body.appendChild(nt);
+    mark();
+    requestAnimationFrame(function () { requestAnimationFrame(function () { if (nt) nt.classList.add("on"); }); });
+    var me = nt; setTimeout(function () { if (nt === me) hideNote(); }, 7000);
+  }
+  /* عند تغيير الجنس (مثلًا من «خريطتي» دون حساب): حدّث البطاقة والزر فورًا */
+  function refresh() { greet(); try { document.dispatchEvent(new Event("mrobot")); } catch (e) {} }
+
   function init() {
-    injectCss(); greet();
+    injectCss(); greet(); setTimeout(notify, 700);
     var el = document.getElementById("robotGreet"); if (!el || el._rb) return; el._rb = 1;
     var next = function () { tap++; greet(); };
     el.addEventListener("click", next);
     el.addEventListener("keydown", function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); next(); } });
   }
 
-  G.MRobot = { svg: svg, who: who, name: function (g) { return NAME[g || who().g]; }, greet: greet, css: injectCss };
+  G.MRobot = { svg: svg, who: who, name: function (g) { return NAME[g || who().g]; }, greet: greet, refresh: refresh, notify: notify, css: injectCss };
   if (typeof document !== "undefined") { if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init); else init(); }
 })(typeof window !== "undefined" ? window : globalThis);

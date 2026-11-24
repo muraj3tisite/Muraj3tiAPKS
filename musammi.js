@@ -102,7 +102,8 @@
       ".tj-hideaya:not(.tj-hidden) .aya-t .qw.wrev .tj-c-jawaz{color:var(--tj-jawaz)!important}.tj-hideaya:not(.tj-hidden) .aya-t .qw.wrev .tj-c-madd2{color:var(--tj-madd2)!important}" +
       ".tj-hideaya:not(.tj-hidden) .aya-t .qw.wrev .tj-c-ghunna{color:var(--tj-ghunna)!important}.tj-hideaya:not(.tj-hidden) .aya-t .qw.wrev .tj-c-gray{color:var(--tj-gray)!important}" +
       ".tj-hideaya:not(.tj-hidden) .aya-t .qw.wrev .tj-c-tafkhim{color:var(--tj-tafkhim)!important}.tj-hideaya:not(.tj-hidden) .aya-t .qw.wrev .tj-c-qalqala{color:var(--tj-qalqala)!important}" +
-      ".ms-lock .qw.wrev{animation:msIn .45s ease}@keyframes msIn{from{opacity:.15}to{opacity:1}}.tj-hideaya.ms-lock .aya-num{pointer-events:none}" +
+      ".ms-lock .qw.wrev{animation:msIn .6s cubic-bezier(.22,1.25,.36,1) both}" +
+      "@keyframes msIn{0%{opacity:0;transform:translateY(7px) scale(.82);filter:blur(3px) drop-shadow(0 0 0 rgba(212,160,23,0))}55%{opacity:1;filter:blur(0) drop-shadow(0 0 7px rgba(212,160,23,.75))}100%{opacity:1;transform:none;filter:none}}.tj-hideaya.ms-lock .aya-num{pointer-events:none}" +
       "@media(prefers-reduced-motion:reduce){#msBtn.live,.ms-lock .qw.wrev{animation:none}}";
     document.head.appendChild(s);
   }
@@ -359,6 +360,7 @@
     st.on = false; clearTimeout(st.tm); if (st.rec) st.rec.stop();
     setLive(false); unlock(); if (!keep) toast("");
   }
+  function revealAll() { for (var i = 0; i < W.length; i++) reveal(i); }
 
   /* ===== الزر العائم ===== */
   function fabInit() {
@@ -368,7 +370,7 @@
     var t = document.createElement("div"); t.id = "msToast"; t.setAttribute("role", "status"); t.setAttribute("aria-live", "polite"); document.body.appendChild(t);
     t.addEventListener("click", function (e) { if (!e.target.closest("label")) toast(""); });
     t.addEventListener("change", function (e) { if (e.target.id === "msOnline") { try { localStorage.setItem("msOnline", e.target.checked ? "1" : "0"); } catch (x) {} } });
-    $("msBtn").onclick = function () { st.on ? stop() : start(); };
+    $("msBtn").onclick = function () { if (st.on) { stop(); revealAll(); } else start(); };   /* عند ضغط الإيقاف تظهر الآيات كلها */
   }
   function paintRobot() {
     var w = G.MRobot ? G.MRobot.who() : { g: "m" };
@@ -388,6 +390,7 @@
     if (!$("tjModes") || $("msBtn")) return;
     if (G.MRobot) G.MRobot.css();
     css(); fabInit();
+    document.addEventListener("mrobot", function () { st.g = ""; paintRobot(); });
     $("tjModes").addEventListener("click", function () { setTimeout(syncBar, 0); });
     var fin = $("tjFin"); if (fin && G.ResizeObserver) new ResizeObserver(function () { document.documentElement.style.setProperty("--ms-fin", fin.offsetHeight + "px"); }).observe(fin);
     var q = $("t-qurani"); if (q && G.MutationObserver) new MutationObserver(syncBar).observe(q, { attributes: true, attributeFilter: ["class"] });

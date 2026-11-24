@@ -1311,7 +1311,7 @@ function renderMap(){if(!S)return;
   +'<h2 style="margin-top:12px">متى تظهر ✓ على اليوم؟</h2><p style="margin:0">'+G("حين تنتهي من كل أقسام يومك: الحفظ الجديد والمراجعة (والقريبة إن وُجدت). التطبيق يعرف القسم من الصفحة التي تقرؤها، فاضغط «أنهيت…» في المصحف وسيعلّم الخريطة، وإن أخطأت فاضغط «إلغاء».","حين تنتهين من كل أقسام يومك: الحفظ الجديد والمراجعة (والقريبة إن وُجدت). التطبيق يعرف القسم من الصفحة التي تقرئينها، فاضغطي «أنهيت…» في المصحف وسيعلّم الخريطة، وإن أخطأتِ فاضغطي «إلغاء».")+'</p></div>'}
 $("t-map").addEventListener("click",function(e){var b=e.target.closest("button");if(!b||!S)return;
  if(b.dataset.w){mapOff=Math.min(0,mapOff+ +b.dataset.w);var f=Math.floor(mapNow().ti/7);if(f+mapOff<0)mapOff=-f;renderMap()}
- else if(b.dataset.ch){S.ch=b.dataset.ch;save();renderMap();finRefresh()}
+ else if(b.dataset.ch){S.ch=b.dataset.ch;save();renderMap();finRefresh();try{MRobot.refresh()}catch(e){}}
  else if(b.dataset.rd){var a=b.dataset.rd.split(",");tjGoTask(+a[0],+a[1],a[2])}});
 /* زر «أنهيت…» داخل المصحف: يحسب القسم من الصفحة، ويمكن تسجيله وإلغاؤه (والتسميع اختياري) */
 function finSection(){var n=tjState.pg,m=tjState.mode,dn=S.log[dkey(new Date())]||{},pr=dn.pr||{},id;
@@ -1793,6 +1793,6 @@ g("setBtn").addEventListener("click",open);g("setBtn2").addEventListener("click"
 })();
 </script>
 
-<script src="robot.js?v=1"></script>
-<script src="musammi.js?v=4"></script>
+<script src="robot.js?v=2"></script>
+<script src="musammi.js?v=5"></script>
 </body></html>
