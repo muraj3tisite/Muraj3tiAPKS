@@ -77,17 +77,25 @@
   /* ===== 2) الواجهة والمحرك ===== */
   var $ = function (i) { return document.getElementById(i); };
   function allowOnline() { try { return localStorage.getItem("msOnline") === "1"; } catch (e) { return false; } }
-  var Q = null, st = { on: false, rec: null, list: [], i: 0, buf: "", itx: "", iskip: 0, t0: 0, tm: null, fails: 0, errs: 0 };
+  var Q = null, st = { on: false, rec: null, list: [], words: [], pending: [], i: -1, buf: "", itx: "", iskip: 0, t0: 0, tm: null, fails: 0, errs: 0 };
   function AQ(n) { return String(n).replace(/\d/g, function (d) { return "٠١٢٣٤٥٦٧٨٩"[d]; }); }
   function css() {
     var s = document.createElement("style");
-    s.textContent = ".ms-bar{display:none;flex-wrap:wrap;gap:8px;align-items:center;margin-top:10px}.ms-bar.on{display:flex}" +
-      "#msBtn{font-weight:800}#msBtn.live{background:#c0392b;border-color:#c0392b;color:#fff}" +
-      "#msStat{font-size:14px;flex:1;min-width:160px}#msStat.ok{color:var(--ok);font-weight:800}#msStat.bad{color:var(--warn);font-weight:800}" +
-      ".ms-dot{display:inline-block;width:10px;height:10px;border-radius:50%;background:#c0392b;margin-inline-end:6px;animation:msP 1s infinite}" +
-      ".ms-pb{display:inline-block;width:90px;height:6px;border-radius:9px;background:var(--acc2);vertical-align:middle;margin-inline-start:8px;overflow:hidden}.ms-pb i{display:block;height:100%;background:var(--ok);transition:width .25s}" +
-      "@keyframes msP{50%{opacity:.25}}@keyframes msIn{from{opacity:.15;transform:scale(.98)}to{opacity:1;transform:none}}" +
-      ".ms-lock .aya-t.rev{animation:msIn .5s ease}.tj-hideaya.ms-lock .aya-num{pointer-events:none}";
+    s.textContent =
+      ".ms-bar{position:fixed;z-index:9998;right:18px;bottom:22px;display:none;align-items:center;gap:8px}" +
+      ".ms-bar.on{display:flex}#msBtn{width:66px;height:66px;border-radius:50%;font-size:25px;font-weight:900;box-shadow:0 8px 26px rgba(0,0,0,.25);display:grid;place-items:center;padding:0}" +
+      "#msBtn.live{border-radius:18px;background:#c0392b;border-color:#c0392b;color:#fff;width:60px;height:60px}" +
+      "#msStat{position:absolute;right:0;bottom:76px;white-space:nowrap;background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:12px;padding:6px 10px;font-size:12px;box-shadow:0 4px 16px rgba(0,0,0,.12)}" +
+      ".ms-robot{position:absolute;right:7px;bottom:75px;width:48px;height:48px;border-radius:50%;background:var(--card);border:2px solid var(--acc);display:grid;place-items:center;font-size:27px;box-shadow:0 4px 14px rgba(0,0,0,.18)}" +
+      ".ms-robot:after{content:attr(data-name);position:absolute;right:52px;white-space:nowrap;font-size:12px;font-weight:800;color:var(--ink);background:var(--card);padding:5px 8px;border-radius:9px;border:1px solid var(--line)}" +
+      ".ms-mentor{display:flex;align-items:center;gap:12px;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:10px 14px;margin:10px 0;color:var(--ink)}" +
+      ".ms-mentor .ms-face{font-size:30px}.ms-mentor b{display:block;margin-bottom:3px}" +
+      ".tj-hideaya .aya-t .qw{color:transparent!important;text-shadow:none!important}" +
+      ".tj-hideaya .aya-t .qw.ms-word-rev{color:inherit!important;text-shadow:none!important}" +
+      ".ms-lock .aya-t .qw.ms-word-rev{animation:msIn .22s ease}" +
+      ".ms-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#c0392b;margin-inline-end:5px;animation:msP 1s infinite}" +
+      "@keyframes msP{50%{opacity:.25}}@keyframes msIn{from{opacity:.25}to{opacity:1}}" +
+      "#tjFin{position:fixed!important;z-index:9997;left:12px;right:12px;bottom:calc(12px + env(safe-area-inset-bottom));width:min(620px,calc(100% - 24px));margin:0 auto!important;box-shadow:0 8px 28px rgba(0,0,0,.22)}";
     document.head.appendChild(s);
   }
   function stat(t, c) { var e = $("msStat"); if (e) { e.className = c || ""; e.innerHTML = t; } }
@@ -125,50 +133,80 @@
     stat('<span class="ms-dot"></span>الآية ' + AQ(k.split(":")[1]) + " — " + AQ(pr) + " من " + AQ(n) + ' كلمة<span class="ms-pb"><i style="width:' + Math.round(100 * pr / n) + '%"></i></span>');
   }
   function resetPage() {
-    st.list = pageAyat().filter(function (k) { return Q && Q[k]; }); st.i = 0; st.buf = ""; st.itx = ""; st.iskip = 0; st.fails = 0; st.errs = 0; st.t0 = Date.now();
+    st.words = [].slice.call(document.querySelectorAll("#mushafText .aya-t .qw")).map(function(e){
+      e.classList.remove("ms-word-rev"); return { el:e, text:norm(e.textContent) };
+    }).filter(function(x){ return !!x.text; });
+    st.list = pageAyat(); st.i = -1; st.pending = []; st.buf = ""; st.itx = ""; st.iskip = 0;
+    st.fails = 0; st.errs = 0; st.t0 = Date.now();
     if (st.on) { lock(); prompt(); }
   }
   function prompt() {
-    if (!st.on || st.i >= st.list.length) return;
-    var k = st.list[st.i]; showProg(0, expectedWords(Q[k]).w.length, k);
+    if (!st.on) return;
+    stat('<span class="ms-dot"></span>ابدأ القراءة من أي موضع في الصفحة');
   }
-  function judge(final) {
-    if (!st.on || st.i >= st.list.length) return;
-    var k = st.list[st.i], at = attempt(), r = matchAyah(Q[k], at.join(" "), allowB(k));
-    /* حدّ أدنى للزمن منذ بدء الآية: ٠٫١٥ ثانية للكلمة، فلا ينجح ضجيج أو نطق مستحيل السرعة */
-    if (r && (Date.now() - st.t0) / 1000 < r.n * .15) r = null;
-    if (r) return pass(k, at, r);
-    var ex = expectedWords(Q[k]).w, pr = progress(ex, strip(at, k));
-    if (!final) { if (at.length) showProg(pr, ex.length, k); return; }
-    if (!at.length) return;
-    st.fails++; st.errs++; st.buf = ""; st.itx = ""; st.iskip = 0; st.t0 = Date.now();
-    /* الخطأ: الآية تبقى مخفية، ويُذكر موضع التعثّر فقط */
-    stat("✗ غير صحيحة — تعثّرتَ عند الكلمة " + AQ(pr + 1) + ". أعد الآية " + AQ(k.split(":")[1]) + " من أولها", "bad");
+  function beepError() {
+    try {
+      var AC = G.AudioContext || G.webkitAudioContext, ac = new AC(), o = ac.createOscillator(), g = ac.createGain();
+      o.type = "sine"; o.frequency.value = 190; g.gain.setValueAtTime(.0001, ac.currentTime);
+      g.gain.exponentialRampToValueAtTime(.16, ac.currentTime + .015);
+      g.gain.exponentialRampToValueAtTime(.0001, ac.currentTime + .20);
+      o.connect(g); g.connect(ac.destination); o.start(); o.stop(ac.currentTime + .21);
+      o.onended = function(){ ac.close(); };
+    } catch(e) {}
   }
-  function pass(k, at, r) {
-    var b = toks(st.buf).length, rest = at.slice(r.used);
-    if (r.used <= b) st.buf = toks(st.buf).slice(r.used).join(" "); else { st.iskip += r.used - b; st.buf = ""; }
-    reveal(k); st.i++; st.fails = 0; st.t0 = Date.now() - rest.length * 250;
-    if (st.i >= st.list.length) return done();
-    stat("✓ صحيحة", "ok"); setTimeout(prompt, 700);
-    if (rest.length) judge(false);
+  function wordScore(a,b) { return sim(a,b); }
+  function revealThrough(index) {
+    for (var j=0;j<=index;j++) st.words[j].el.classList.add("ms-word-rev");
+  }
+  function findStart(tokens) {
+    var best=-1, bestScore=0, bestRun=0;
+    for (var i=0;i<st.words.length;i++) {
+      var run=0, score=0;
+      for (var j=0;j<tokens.length && i+j<st.words.length;j++) {
+        var sc=wordScore(st.words[i+j].text,tokens[j]);
+        if(sc>=.75){run++;score+=sc;} else break;
+      }
+      if(run>bestRun || (run===bestRun && score>bestScore)){best=i;bestRun=run;bestScore=score;}
+    }
+    return bestRun ? {index:best,run:bestRun} : null;
+  }
+  function consume(tokens) {
+    if (!st.on || !tokens.length) return;
+    if (st.i < 0) {
+      var found=findStart(tokens);
+      if(!found){beepError();return;}
+      st.i=found.index-1;
+    }
+    tokens.forEach(function(t){
+      var next=st.i+1, expected=st.words[next];
+      if(!expected)return;
+      if(wordScore(expected.text,t)>=.75){
+        st.i=next; revealThrough(st.i);
+      } else {
+        st.errs++; beepError();
+      }
+    });
+    var count=Math.max(0,st.i+1);
+    stat('<span class="ms-dot"></span>تم كشف '+AQ(count)+' كلمة');
+    if(st.i>=st.words.length-1) done();
   }
   function done() {
-    var m = st.errs;
-    stat("✓ أتممتَ الصفحة — " + (m ? "تعثّرتَ " + AQ(m) + " مرة" : "بلا أي تعثّر") + ". اضغط «أنهيت…» لتسجيلها.", "ok");
-    try { if (G.S) { G.S.tas = G.S.tas || {}; G.S.tas[G.tjState.pg] = { d: G.dkey(new Date()), ok: m ? 0 : 1 }; G.save(); } } catch (e) {}
+    stat("أحسنت! أتممت تسميع الصفحة. اضغط زر إنهاء التسميع لتسجيلها.");
+    try { if (G.S) { G.S.tas = G.S.tas || {}; G.S.tas[G.tjState.pg] = { d: G.dkey(new Date()), ok: st.errs ? 0 : 1 }; G.save(); } } catch (e) {}
     stop(true);
   }
   function onSpeech(t, fin) {
-    if (!st.on) return;
-    if (fin) { st.buf = toks(st.buf).concat(toks(t).slice(st.iskip)).join(" "); st.itx = ""; st.iskip = 0; } else st.itx = t;
-    judge(false);
-    clearTimeout(st.tm); st.tm = setTimeout(function () { judge(true); }, fin ? 1800 : 2600);
-  }
-  function bestAlt(alts) {
-    var k = st.list[st.i]; if (!k) return alts[0];
-    for (var j = 0; j < alts.length; j++) if (matchAyah(Q[k], toks(st.buf).concat(toks(alts[j]).slice(st.iskip)).join(" "), allowB(k))) return alts[j];
-    return alts[0];
+    if (!st.on || !fin) return;
+    var tokens=toks(t);
+    if(!tokens.length)return;
+    if(st.i<0){
+      st.pending=st.pending.concat(tokens);
+      clearTimeout(st.tm);
+      if(st.pending.length>=2){var first=st.pending;st.pending=[];consume(first);}
+      else st.tm=setTimeout(function(){var first=st.pending;st.pending=[];consume(first);},1800);
+      return;
+    }
+    consume(tokens);
   }
   /* المحرك: محلي مخصص (window.MusammiEngine) ثم تعرّف الجهاز. الإنترنت لا يُستخدم إلا بإذن صريح */
   function engine() {
@@ -179,7 +217,7 @@
     return { start: function (cb, onEnd) {
       r.onresult = function (e) { for (var i = e.resultIndex; i < e.results.length; i++) {
         var res = e.results[i];
-        if (res.isFinal) cb(bestAlt([].map.call(res, function (a) { return a.transcript; })), true); else cb(res[0].transcript, false);
+        if (res.isFinal) cb(res[0].transcript, true); else cb(res[0].transcript, false);
       } };
       r.onerror = function (e) { onEnd(e.error); }; r.onend = function () { onEnd(); };
       r.start();
@@ -197,40 +235,58 @@
   }
   function start() {
     loadText(function (ok) {
-      if (!ok) return stat("ملف النص غير موجود: ضع data/quran-text.json (انظر README).", "bad");
+      if (!ok) return stat("تعذّر تحميل نص القرآن.", "bad");
       var en = engine();
-      if (!en) return stat("هذا المتصفح لا يوفّر تعرّفًا صوتيًا يعمل دون إنترنت. استخدم Chrome حديثًا، أو ضع محركًا محليًا (انظر README).", "bad");
+      if (!en) return stat("التعرّف الصوتي غير متاح في هذا المتصفح. جرّب Chrome حديثًا.", "bad");
       (en.ready || function (c) { c(true); })(function (good, why) {
-        if (!good) return stat(why || "المحرك غير جاهز", "bad");
-        st.rec = en; st.on = true; $("msBtn").classList.add("live"); $("msBtn").textContent = "⏹ إيقاف";
+        if (!good) return stat(why || "محرك الصوت غير جاهز", "bad");
+        st.rec = en; st.on = true;
+        $("msBtn").classList.add("live"); $("msBtn").textContent = "■";
         resetPage();
-        var run = function () { st.itx = ""; st.iskip = 0; en.start(onSpeech, function (err) {
+        var run = function () { st.itx = ""; en.start(onSpeech, function (err) {
           if (!st.on) return;
-          if (err === "not-allowed" || err === "service-not-allowed") { stat("اسمح للموقع باستخدام الميكروفون.", "bad"); return stop(); }
-          if (err === "network" || err === "language-not-supported") { stat("لا يعمل التعرّف الآن دون إنترنت. نزّل حزمة العربية دون اتصال في إعدادات الهاتف، أو اتصل بالإنترنت وفعّل «السماح بالإنترنت».", "bad"); return stop(); }
-          setTimeout(run, 250); }); };
+          if (err === "not-allowed" || err === "service-not-allowed") { stat("اسمح باستخدام الميكروفون."); return stop(); }
+          if (err === "network" || err === "language-not-supported") { stat("التعرّف الصوتي غير متاح حاليًا."); return stop(); }
+          setTimeout(run, 250);
+        }); };
         run();
       });
     });
   }
   function stop(keep) {
     st.on = false; clearTimeout(st.tm); if (st.rec) st.rec.stop();
-    var b = $("msBtn"); if (b) { b.classList.remove("live"); b.textContent = "🎙 المسمّع الآلي"; }
+    var b = $("msBtn"); if (b) { b.classList.remove("live"); b.textContent = "🎙"; }
     unlock(); if (!keep) stat("");
   }
-  function syncBar() { var b = document.querySelector(".ms-bar"), m = G.tjState && G.tjState.mode; if (b) b.classList.toggle("on", m === "review" || m === "tasmee"); if (m === "study" && st.on) stop(); }
+  function syncBar() {
+    var b = document.querySelector(".ms-bar"), m = G.tjState && G.tjState.mode;
+    if (b) b.classList.toggle("on", m === "review" || m === "tasmee");
+    if (m === "study" && st.on) stop();
+  }
   function init() {
     if (!$("tjModes") || $("msBtn")) return;
     css();
     var bar = document.createElement("div"); bar.className = "ms-bar";
-    bar.innerHTML = '<button id="msBtn" class="p" type="button">🎙 المسمّع الآلي</button><span id="msStat" aria-live="polite"></span><label style="display:flex;gap:6px;align-items:center;font-size:13px;font-weight:400;margin:0;width:100%"><input type="checkbox" id="msOnline"> السماح بالتعرّف عبر الإنترنت إن لم تتوفر حزمة محلية (يُرسل الصوت إلى Google)</label>';
-    var ck = bar.querySelector("#msOnline"); ck.checked = allowOnline();
-    ck.onchange = function () { try { localStorage.setItem("msOnline", this.checked ? "1" : "0"); } catch (e) {} };
-    $("tjModes").parentNode.appendChild(bar);
+    bar.innerHTML = '<div class="ms-robot" id="msRobot" aria-hidden="true" data-name="مازن">🤖</div><span id="msStat" aria-live="polite"></span><button id="msBtn" class="p" type="button" aria-label="بدء التسميع">🎙</button>';
+    document.body.appendChild(bar);
     $("msBtn").onclick = function () { st.on ? stop() : start(); };
     $("tjModes").addEventListener("click", function () { setTimeout(syncBar, 0); });
     var o = G.tjRenderPage; G.tjRenderPage = function () { var r = o.apply(this, arguments); if (st.on) resetPage(); return r; };
     var s0 = G.tjSetMode; G.tjSetMode = function () { var r = s0.apply(this, arguments); syncBar(); return r; };
+    function mentor() {
+      var profile=G.S||{}, girl=profile.ch==="girl", who=girl?"عائشة":"مازن";
+      var old=$("msMentor"); if(old)old.remove();
+      var main=$("mainWrap"), head=main&&main.querySelector("header");
+      if(!head)return;
+      var box=document.createElement("div"); box.id="msMentor"; box.className="ms-mentor";
+      box.innerHTML='<span class="ms-face" aria-hidden="true">🤖</span><span><b>أنا '+who+'، صديقك في المراجعة!</b>'+ (girl?'أهلًا بكِ! كل آية تحفظينها خطوة جميلة، تابعي بثقة 🌷':'أهلًا بك! كل آية تحفظها خطوة جميلة، تابع بثقة ⭐') +'</span>';
+      head.insertAdjacentElement("afterend",box);
+      var robot=$("msRobot"); if(robot)robot.setAttribute("data-name",who);
+    }
+    mentor();
+    document.addEventListener("click",function(e){
+      if(e.target.closest('nav button, #accBtn, #goBtn, #authGo'))setTimeout(mentor,150);
+    });
     syncBar();
   }
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init); else init();
