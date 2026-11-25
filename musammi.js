@@ -25,6 +25,19 @@
     if (Math.max(a.length, b.length) <= 4) return 0; /* الكلمات القصيرة (حتى ٤ حروف): تطابق تام، فلا يمرّ حرف ناقص */
     return 1 - lev(a, b) / Math.max(a.length, b.length);
   }
+  /* تقارب الأصوات التي يخلط فيها التعرّف الصوتي كثيرًا (ظ/ض، ذ/ز، ث/س/ص، ط/ت، ح/ه، ع/ء/ا). لا نضمّ ق/ك ولا غ/خ كي لا نقبل كلمة قرآنية أخرى */
+  var PHM = { "ء": "ا", "ع": "ا", "ظ": "ض", "ذ": "ز", "ث": "س", "ص": "س", "ط": "ت", "ح": "ه" };
+  function pk(w) { return w.replace(/[ءعظذثصطح]/g, function (c) { return PHM[c]; }).replace(/ا/g, "").replace(/(.)\1+/g, "$1"); }
+  function wsim(a, b) {
+    var sa = sk(a), sb = sk(b);
+    if (sa === sb) return 1;
+    if (Math.min(sa.length, sb.length) < 3) return 0;
+    var pa = pk(sa), pb = pk(sb);
+    if (pa === pb) return .92;
+    var L = Math.max(pa.length, pb.length);
+    if (L <= 3) return 0;
+    return 1 - lev(pa, pb) / L;
+  }
   var LN = { ا: "الف", ل: "لام", م: "ميم", ص: "صاد", ر: "را", ك: "كاف", ه: "ها", ي: "يا", ع: "عين", ط: "طا", س: "سين", ح: "حا", ق: "قاف", ن: "نون" };
   var MUQ = /^(الم|المص|الر|المر|كهيعص|طه|طسم|طس|يس|ص|حم|عسق|ق|ن)$/;
   /* الحروف المقطّعة تُنطق أسماءً: الم ← «ألف لام ميم» (ويُقبل نطقها كما كُتبت) */
@@ -70,7 +83,7 @@
     }
     return null;
   }
-  var API = { norm: norm, matchAyah: matchAyah, expectedWords: expectedWords, BSM: BSM, isBsm: isBsm, sim: sim };
+  var API = { norm: norm, matchAyah: matchAyah, expectedWords: expectedWords, BSM: BSM, isBsm: isBsm, sim: sim, wsim: wsim };
   if (typeof module !== "undefined" && module.exports) { module.exports = API; return; }
   G.Musammi = API;
 
@@ -79,7 +92,8 @@
   var $ = function (i) { return document.getElementById(i); };
   function allowOnline() { try { return localStorage.getItem("msOnline") === "1"; } catch (e) { return false; } }
   var Q = null, W = [];
-  var st = { on: false, rec: null, pos: -1, fin: [], itx: [], j: 0, tm: null, tt: null, errs: 0, s0: -1, beepT: 0, ac: null, g: "" };
+  var re = {};   /* مرات إعادة قراءة كل آية */
+  var st = { erred: false, on: false, rec: null, pos: -1, fin: [], itx: [], j: 0, tm: null, tt: null, errs: 0, s0: -1, beepT: 0, ac: null, g: "" };
   function gN(m, f) { var w = G.MRobot && G.MRobot.who(); return w && w.g === "f" ? f : m; }
 
   function css() {
@@ -92,6 +106,7 @@
       "#msBtn::after{content:'';width:28px;height:28px;border-radius:50%;background:#d93025;transition:width .18s,height .18s,border-radius .18s}" +
       "#msBtn.live{animation:msRing 1.3s ease-out infinite}#msBtn.live::after{width:24px;height:24px;border-radius:6px}" +
       "@keyframes msRing{0%{box-shadow:0 0 0 0 rgba(217,48,37,.55),0 6px 18px rgba(0,0,0,.3)}100%{box-shadow:0 0 0 18px rgba(217,48,37,0),0 6px 18px rgba(0,0,0,.3)}}" +
+      "#msAsk{position:fixed;left:12px;right:12px;bottom:calc(env(safe-area-inset-bottom,0px) + 12px);z-index:88;background:var(--card);color:var(--ink);border:1px solid var(--acc);border-radius:14px;padding:12px 14px;box-shadow:0 10px 30px rgba(0,0,0,.25);max-width:520px;margin:0 auto}#msAsk b{display:block;margin-bottom:2px}#msAsk p{margin:0 0 10px;color:var(--mut);font-size:14px}#msAsk .row{display:flex;gap:8px;flex-wrap:wrap}#msAsk .row button{flex:1;min-width:110px}" +
       "#msToast{position:fixed;top:calc(env(safe-area-inset-top,0px) + 10px);left:50%;transform:translateX(-50%);width:min(520px,calc(100% - 24px));z-index:46;display:none;background:var(--card);color:var(--ink);border:2px solid var(--warn);border-radius:14px;padding:10px 14px;font-size:14px;line-height:1.7;box-shadow:0 8px 24px rgba(0,0,0,.3)}" +
       "#msToast.on{display:block}#msToast.ok{border-color:var(--ok);font-weight:800}" +
       "#msToast label{display:flex;gap:6px;align-items:center;font-size:13px;font-weight:400;margin:6px 0 0}" +
@@ -102,6 +117,7 @@
       ".tj-hideaya:not(.tj-hidden) .aya-t .qw.wrev .tj-c-jawaz{color:var(--tj-jawaz)!important}.tj-hideaya:not(.tj-hidden) .aya-t .qw.wrev .tj-c-madd2{color:var(--tj-madd2)!important}" +
       ".tj-hideaya:not(.tj-hidden) .aya-t .qw.wrev .tj-c-ghunna{color:var(--tj-ghunna)!important}.tj-hideaya:not(.tj-hidden) .aya-t .qw.wrev .tj-c-gray{color:var(--tj-gray)!important}" +
       ".tj-hideaya:not(.tj-hidden) .aya-t .qw.wrev .tj-c-tafkhim{color:var(--tj-tafkhim)!important}.tj-hideaya:not(.tj-hidden) .aya-t .qw.wrev .tj-c-qalqala{color:var(--tj-qalqala)!important}" +
+      ".aya-num.reread{position:relative}.aya-num.reread::after{content:'↻ ' attr(data-re);position:absolute;top:-1.05em;left:50%;transform:translateX(-50%);font:700 .5em/1.5 system-ui,sans-serif;white-space:nowrap;background:var(--gold,#d4a017);color:#fff;border-radius:99px;padding:0 .6em;box-shadow:0 1px 3px rgba(0,0,0,.3);direction:rtl}" +
       ".ms-lock .qw.wrev{animation:msIn .6s cubic-bezier(.22,1.25,.36,1) both}" +
       "@keyframes msIn{0%{opacity:0;transform:translateY(7px) scale(.82);filter:blur(3px) drop-shadow(0 0 0 rgba(212,160,23,0))}55%{opacity:1;filter:blur(0) drop-shadow(0 0 7px rgba(212,160,23,.75))}100%{opacity:1;transform:none;filter:none}}.tj-hideaya.ms-lock .aya-num{pointer-events:none}" +
       "@media(prefers-reduced-motion:reduce){#msBtn.live,.ms-lock .qw.wrev{animation:none}}";
@@ -180,7 +196,8 @@
 
   /* ===== المطابقة كلمةً كلمة ===== */
   function toks(s) { var n = norm(s); return n ? n.split(" ") : []; }
-  function wm(a, b) { return !!a && !!b && sim(a, b) >= .75; }
+  function wm(a, b) { return !!a && !!b && wsim(a, b) >= .75; }
+  function soft(a, b) { return !!a && !!b && sk(a).length >= 3 && wsim(a, b) >= .5; }
   /* هل تُطابق الكلمة المتوقعة في الموضع p الكلمات المنطوقة من T[j]؟ تُرجع {tok: كلمات منطوقة مستهلكة، adv: كلمات صفحة متقدَّم بها} أو null */
   function tryAt(p, T, j) {
     var w = W[p]; if (!w || j >= T.length) return null;
@@ -188,14 +205,14 @@
     if (w.names) {
       if (wm(w.t, T[j])) return { tok: 1, adv: 1 };
       var n = w.names.length; if (T.length - j < n) return null;
-      for (var i = 0; i < n; i++) if (sim(w.names[i], T[j + i]) < 1) return null;
+      for (var i = 0; i < n; i++) if (wsim(w.names[i], T[j + i]) < .9) return null;
       return { tok: n, adv: 1 };
     }
     if (wm(w.t, T[j])) return { tok: 1, adv: 1 };
     /* دمج أو فصل في التعرّف: «يوم الدين» ↔ «يومالدين» */
-    if (T[j + 1]) { var c = T[j] + T[j + 1]; if (c.length >= 6 && sim(w.t, c) >= .85) return { tok: 2, adv: 1 }; }
+    if (T[j + 1]) { var c = T[j] + T[j + 1]; if (c.length >= 6 && wsim(w.t, c) >= .85) return { tok: 2, adv: 1 }; }
     var nx = W[p + 1];
-    if (nx && !nx.loose && !nx.names && (w.t + nx.t).length >= 8 && sim(w.t + nx.t, T[j]) >= .88) return { tok: 1, adv: 2 };
+    if (nx && !nx.loose && !nx.names && (w.t + nx.t).length >= 8 && wsim(w.t + nx.t, T[j]) >= .88) return { tok: 1, adv: 2 };
     return null;
   }
   function seq(p, T, s, lim) {
@@ -223,15 +240,25 @@
     for (p = 0; p < best.q; p++) reveal(p);   /* الكلمة المقروءة وكل ما قبلها */
     st.pos = best.q; st.j = best.j; st.s0 = best.p; return true;
   }
-  /* قفزة صامتة: إن أعاد القارئ من موضع آخر (كلمتان متتاليتان صحيحتان) ننتقل إليه دون صافرة */
+  /* قفزة صامتة: إن أعاد القارئ من موضع آخر (كلمتان متتاليتان صحيحتان) ننتقل إليه دون صافرة، وأقرب موضع للحالي أولًا */
   function findJump(T, avail) {
     if (avail < 2) return null;
-    for (var p = 0; p < W.length; p++) {
+    var best = null, p, r;
+    for (p = 0; p < W.length; p++) {
       if (p === st.pos) continue;
-      var r = seq(p, T, st.j, 2);
-      if (r.m >= 2 && sk(T[st.j] + T[st.j + 1]).length >= 6) return { p: p, q: r.q, j: r.j };
+      r = seq(p, T, st.j, 2);
+      if (r.m >= 2 && sk(T[st.j] + T[st.j + 1]).length >= 6 && (!best || Math.abs(p - st.pos) < Math.abs(best.p - st.pos))) best = { p: p, q: r.q, j: r.j };
     }
-    return null;
+    return best;
+  }
+  /* علامة «أعاد قراءة الآية»: شارة ↻ ورقم المرات بجانب رقم الآية */
+  function arNum(n) { return String(n).replace(/\d/g, function (d) { return "٠١٢٣٤٥٦٧٨٩"[d]; }); }
+  function markReread(p) {
+    var w = W[p]; if (!w || w.loose) return;
+    var k = w.k; re[k] = (re[k] || 0) + 1;
+    var n = document.querySelector('#mushafText .aya-num[data-a="' + k + '"]');
+    if (n) { n.classList.add("reread"); n.setAttribute("data-re", arNum(re[k])); }
+    toast("↻ " + gN("أعدتَ", "أعدتِ") + " قراءة الآية " + arNum(k.split(":")[1]), "ok", 2500);
   }
 
   function step(final) {
@@ -257,16 +284,31 @@
       r = tryAt(st.pos, T, st.j);
       if (r) {
         for (a = 0; a < r.adv; a++) reveal(st.pos + a);
-        st.pos += r.adv; st.j += r.tok;
+        st.pos += r.adv; st.j += r.tok; st.erred = false;
         if (st.pos >= W.length) return done();
         continue;
       }
       /* تكرار الكلمة السابقة (تردّد) لا يُعدّ خطأً */
       if (st.pos > 0 && W[st.pos - 1].t && wm(W[st.pos - 1].t, T[st.j])) { st.j++; continue; }
+      /* تساهل: كلمة تشبه المتوقعة (التعرّف شوّهها) وتليها الكلمة التالية الصحيحة ← نقبلها */
+      if (!w.loose && !w.names && soft(w.t, T[st.j])) {
+        if (T[st.j + 1] === undefined && !final) break;
+        var r2 = tryAt(st.pos + 1, T, st.j + 1);
+        if (r2) { reveal(st.pos); st.pos++; st.j++; st.erred = false; continue; }
+      }
       jp = findJump(T, avail);
-      if (jp) { for (a = jp.p; a < jp.q; a++) reveal(a); st.pos = jp.q; st.j = jp.j; if (st.pos >= W.length) return done(); continue; }
-      /* خطأ: صافرة فقط، والكلمة تبقى مخفية */
-      st.errs++; st.j++; beep();
+      if (jp) {
+        if (jp.p < st.pos) markReread(jp.p);
+        for (a = jp.p; a < jp.q; a++) reveal(a);
+        st.pos = jp.q; st.j = jp.j; st.erred = false;
+        if (st.pos >= W.length) return done();
+        continue;
+      }
+      /* الخطأ لا يُحكم به إلا بعد ثلاث كلمات (أو سكوت)، لأن التعرّف قد يصحّح نفسه */
+      if (!final && avail < 3) break;
+      /* صافرة واحدة فقط لكل خطأ: لا تتكرر حتى تُقرأ كلمة صحيحة أو يعيد القارئ من موضع آخر */
+      if (!st.erred) { st.erred = true; st.errs++; beep(); }
+      st.j++;
     }
     /* تنظيف المخزن بعد استهلاك كل الكلمات */
     if (!st.itx.length && st.j >= st.fin.length && st.fin.length) { st.fin = []; st.j = 0; }
@@ -316,7 +358,7 @@
       var fb = function (why) { if (allowOnline()) { r.processLocally = false; return cb(true); } cb(false, why); };
       G.SpeechRecognition.available({ langs: ["ar-SA"], processLocally: true }).then(function (s) {
         if (s === "available") return cb(true);
-        if (s === "unavailable") return fb("حزمة العربية للتعرّف الصوتي غير متاحة على هذا الجهاز. فعّل «السماح بالإنترنت» أو نزّل حزمة العربية دون اتصال في إعدادات الهاتف.");
+        if (s === "unavailable") return fb("حزمة العربية للتعرّف الصوتي غير متاحة على هذا الجهاز. نزّل حزمة التسميع الآلي من إعدادات التطبيق، أو فعّل «السماح بالإنترنت».");
         toast("جارٍ تنزيل حزمة التعرّف على العربية (مرة واحدة)…");
         G.SpeechRecognition.install({ langs: ["ar-SA"], processLocally: true }).then(function (ok) { ok ? cb(true) : fb("تعذّر تنزيل الحزمة"); }, function () { fb("تعذّر تنزيل الحزمة"); });
       }, function () { cb(true); });
@@ -324,7 +366,7 @@
   }
 
   function resetPage() {
-    st.fin = []; st.itx = []; st.j = 0; st.pos = -1; st.s0 = -1; st.errs = 0; clearTimeout(st.tm);
+    st.fin = []; st.itx = []; st.j = 0; st.pos = -1; st.s0 = -1; st.errs = 0; st.erred = false; re = {}; clearTimeout(st.tm);
     W = buildWords();
     if (st.on) lock();
   }
@@ -348,7 +390,7 @@
           en.start(onSpeech, function (err) {
             if (!st.on) return;
             if (err === "not-allowed" || err === "service-not-allowed") { toast("اسمح للموقع باستخدام الميكروفون.", "", 7000); return stop(true); }
-            if (err === "network" || err === "language-not-supported") { toast("لا يعمل التعرّف الآن دون إنترنت. نزّل حزمة العربية دون اتصال في إعدادات الهاتف، أو اتصل بالإنترنت وفعّل «السماح بالإنترنت».<br>" + OLBOX, ""); return stop(true); }
+            if (err === "network" || err === "language-not-supported") { toast("لا يعمل التعرّف الآن دون إنترنت. نزّل حزمة التسميع الآلي من إعدادات التطبيق (مرة واحدة)، أو اتصل بالإنترنت وفعّل «السماح بالإنترنت».<br>" + OLBOX, ""); return stop(true); }
             setTimeout(run, 250);
           });
         };
@@ -386,10 +428,82 @@
     if (vis) paintRobot();
     if (st.on && (!vis)) stop();
   }
+  /* ===== حزمة التعرّف على العربية: تُنزَّل مرة واحدة ثم يعمل التسميع الآلي دون إنترنت ===== */
+  var PK = { langs: ["ar-SA"], poll: null };
+  function packSupported() { var R = G.SpeechRecognition; return !!(R && R.available && R.install); }
+  /* cb("unsupported" | "available" | "downloadable" | "downloading" | "unavailable") */
+  function packStatus(cb) {
+    if (!packSupported()) return cb("unsupported");
+    G.SpeechRecognition.available({ langs: PK.langs, processLocally: true }).then(function (x) { cb(x); }, function () { cb("unsupported"); });
+  }
+  function packInstall(cb) {
+    if (!packSupported()) return cb(false);
+    G.SpeechRecognition.install({ langs: PK.langs, processLocally: true }).then(function (ok) { cb(!!ok); }, function () { cb(false); });
+  }
+  G.MusammiPack = { supported: packSupported, status: packStatus, install: packInstall };
+
+  function paintPack() {
+    var st = $("msPackSt"), b = $("msPackBtn"); if (!st || !b) return;
+    packStatus(function (x) {
+      b.disabled = true; b.textContent = "تنزيل حزمة التسميع الآلي";
+      if (x === "available") { st.textContent = "✓ الحزمة محمّلة على جهازك، والتسميع الآلي يعمل دون إنترنت."; b.textContent = "الحزمة محمّلة ✓"; clearInterval(PK.poll); }
+      else if (x === "downloadable") { st.textContent = "الحزمة غير محمّلة بعد. اتصل بالإنترنت ثم اضغط التنزيل (مرة واحدة فقط)."; b.disabled = false; }
+      else if (x === "downloading") { st.textContent = "جارٍ تنزيل الحزمة… لا تُغلق التطبيق."; b.textContent = "جارٍ التنزيل…"; if (!PK.poll) PK.poll = setInterval(paintPack, 2000); }
+      else if (x === "unavailable") st.textContent = "اللغة العربية للتعرّف المحلي غير متاحة على هذا الجهاز. يمكنك استخدام التعرّف عبر الإنترنت عند الحاجة.";
+      else st.textContent = "هذا المتصفح لا يدعم تنزيل حزمة التعرّف. استخدم Chrome حديثًا (أندرويد أو حاسوب).";
+      if (x !== "downloading" && PK.poll) { clearInterval(PK.poll); PK.poll = null; }
+    });
+  }
+  function doInstall(onDone) {
+    if (!navigator.onLine) return onDone(false, "لا يوجد اتصال بالإنترنت. اتصل ثم أعد المحاولة.");
+    packInstall(function (ok) { onDone(ok, ok ? "" : "تعذّر التنزيل. تأكد من الإنترنت ومن توفر مساحة ثم أعد المحاولة."); });
+  }
+  function packUi() {
+    var off = $("offSec"), host = off ? off.parentNode : null; if (!host || $("msPackSec")) return;
+    var sec = document.createElement("div"); sec.className = "stg-sec"; sec.id = "msPackSec";
+    sec.innerHTML = '<label>التسميع الآلي دون إنترنت</label><p class="sub">نزّل حزمة التعرّف على الصوت العربي مرة واحدة، ثم يعمل التسميع الآلي بلا إنترنت. تُحفظ على جهازك ولا يُرسل صوتك لأي خادم.</p><p class="sub" id="msPackSt" role="status" style="margin:8px 0;font-weight:600"></p><button type="button" id="msPackBtn" class="p" style="width:100%" disabled>تنزيل حزمة التسميع الآلي</button>';
+    off.insertAdjacentElement("afterend", sec);
+    $("msPackBtn").onclick = function () {
+      var b = this, st = $("msPackSt"); b.disabled = true; b.textContent = "جارٍ التنزيل…"; st.textContent = "جارٍ تنزيل الحزمة… لا تُغلق التطبيق.";
+      doInstall(function (ok, why) { if (!ok) { paintPack(); st.textContent = why; } else { try { localStorage.setItem("msPackAsk", "done"); } catch (e) {} paintPack(); } });
+    };
+    ["setBtn", "setBtn2"].forEach(function (id) { var e = $(id); if (e) e.addEventListener("click", paintPack); });
+    paintPack();
+  }
+  /* سؤال عند فتح التطبيق: نزّل الحزمة الآن؟ (مرة واحدة، ويُعاد بعد ٣ أيام إن اختار «لاحقًا») */
+  function packAsk() {
+    var K = "msPackAsk", v = null; try { v = localStorage.getItem(K); } catch (e) {}
+    if (v === "done" || !packSupported() || !navigator.onLine) return;
+    if (v && v.indexOf("later:") === 0 && Date.now() - (+v.slice(6) || 0) < 3 * 864e5) return;
+    var tries = 0;
+    (function wait() {
+      var o = $("offAsk"), u = $("updBar");
+      if (tries++ > 300) return;
+      if ((o && !o.classList.contains("hide")) || (u && !u.classList.contains("hide"))) return setTimeout(wait, 2000);
+      packStatus(function (x) {
+        if (x === "available") { try { localStorage.setItem(K, "done"); } catch (e) {} return; }
+        if (x !== "downloadable") return;
+        var a = document.createElement("div"); a.id = "msAsk"; a.setAttribute("role", "dialog");
+        a.innerHTML = '<b>التسميع الآلي دون إنترنت</b><p id="msAskP">هل تريد تنزيل حزمة الصوت العربي الآن؟ مرة واحدة فقط، ثم يعمل التسميع الآلي بلا إنترنت. الحجم صغير نسبيًا، ويُفضَّل استخدام واي فاي.</p><div class="row"><button type="button" id="msAskGo" class="p">نعم، نزّل الحزمة</button><button type="button" id="msAskX">لاحقًا</button></div>';
+        document.body.appendChild(a);
+        var go = $("msAskGo"), no = $("msAskX"), p = $("msAskP");
+        no.onclick = function () { a.remove(); try { if (localStorage.getItem(K) !== "done") localStorage.setItem(K, "later:" + Date.now()); } catch (e) {} };
+        go.onclick = function () {
+          go.disabled = true; go.textContent = "جارٍ التنزيل…"; p.textContent = "لا تُغلق التطبيق حتى يكتمل التنزيل.";
+          doInstall(function (ok, why) {
+            if (ok) { try { localStorage.setItem(K, "done"); } catch (e) {} p.textContent = "تم! يعمل التسميع الآلي الآن دون إنترنت."; go.hidden = true; no.textContent = "إغلاق"; setTimeout(function () { a.remove(); }, 3500); paintPack(); }
+            else { p.textContent = why; go.disabled = false; go.textContent = "أعد المحاولة"; }
+          });
+        };
+      });
+    })();
+  }
+
   function init() {
     if (!$("tjModes") || $("msBtn")) return;
     if (G.MRobot) G.MRobot.css();
     css(); fabInit();
+    packUi(); setTimeout(packAsk, 6000);
     /* زر إخفاء/إظهار الآيات: الكلمات المكشوفة بالمسمّع تُمسح أولًا، وإلا بقيت ظاهرة رغم الإخفاء */
     var hb = $("tjHideAya"); if (hb) hb.addEventListener("click", function () { clearRev(); });
     document.addEventListener("mrobot", function () { st.g = ""; paintRobot(); });
