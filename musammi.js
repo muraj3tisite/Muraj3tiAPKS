@@ -144,8 +144,8 @@
     return st.ac;
   }
   G.MusammiAC = function () { return ac(); };
-  var MSV = "1.2.5";   /* رقم إصدار المسمّع: يظهر في الفحص لنتأكد أي نسخة تعمل */
-  var TOL = .75, STOL = .5;   /* حدّ التشابه: أخفض مع Whisper لأن تعرّفه للقرآن أقل دقة */
+  var MSV = "1.3.0";   /* رقم إصدار المسمّع: يظهر في الفحص لنتأكد أي نسخة تعمل */
+  var TOL = .75, STOL = .5;   /* حدّ التشابه: أخفض قليلًا مع محرك التلاوة لأن نطقه يُكتب بإملاء المصحف العثماني */
   function beep() {
     var n = Date.now(); if (n - st.beepT < 600) return; st.beepT = n;
     var r = $("msRobot"); if (r) { r.classList.remove("rb-err"); void r.offsetWidth; r.classList.add("rb-err"); }
@@ -388,19 +388,19 @@
   function arNum(n) { return String(n).replace(/\d/g, function (d) { return "٠١٢٣٤٥٦٧٨٩"[d]; }); }
   function lsg(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
   function lss(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
-  function loadWhisper(cb) {
-    if (G.MusammiWhisper) return cb(null);
-    var sc = document.createElement("script"); sc.src = "whisper-engine.js?v=4";
-    sc.onload = function () { cb(G.MusammiWhisper ? null : 1); }; sc.onerror = function () { cb(1); };
+  function loadQuran(cb) {
+    if (G.MusammiQuran) return cb(null);
+    var sc = document.createElement("script"); sc.src = "quran-engine.js?v=1";
+    sc.onload = function () { cb(G.MusammiQuran ? null : 1); }; sc.onerror = function () { cb(1); };
     document.head.appendChild(sc);
   }
-  var WNO = "هذا المتصفح لا يوفّر تعرّفًا صوتيًا مدمجًا. نزّل محرك Whisper من إعدادات التطبيق (مرة واحدة)، أو فعّل التعرّف عبر الإنترنت.<br>";
-  /* اختيار المحرك: محرك مخصص ← Whisper إن فُضّل ← تعرّف المتصفح ← Whisper المحمّل كبديل */
+  var WNO = "هذا المتصفح لا يوفّر تعرّفًا صوتيًا مدمجًا. نزّل محرك التلاوة من إعدادات التطبيق (مرة واحدة)، أو فعّل التعرّف عبر الإنترنت.<br>";
+  /* اختيار المحرك: محرك مخصص ← التلاوة إن فُضّل ← تعرّف المتصفح ← التلاوة المحمّل كبديل */
   function pickEngine(cb) {
     if (G.MusammiEngine) return cb(G.MusammiEngine);
-    var wOn = !!lsg("msWhisper"), pref = lsg("msEng") || "auto";
-    var useW = function () { loadWhisper(function (err) { if (err) return cb(null, "تعذّر تحميل ملف محرك Whisper. اتصل بالإنترنت وأعد المحاولة."); cb(G.MusammiWhisper.engine(), null, true); }); };
-    if (pref === "whisper" || (wOn && !navigator.onLine)) return useW();   /* دون إنترنت: Whisper أولًا */
+    var wOn = !!lsg("msQuran"), pref = lsg("msEng") || "auto";
+    var useW = function () { loadQuran(function (err) { if (err) return cb(null, "تعذّر تحميل ملف محرك التلاوة. اتصل بالإنترنت وأعد المحاولة."); cb(G.MusammiQuran.engine(), null, true); }); };
+    if (pref === "quran" || (wOn && !navigator.onLine)) return useW();   /* دون إنترنت: التلاوة أولًا */
     var en = engine();
     if (!en) return wOn ? useW() : cb(null, WNO + OLBOX);
     cb(en, null, false, wOn ? useW : null);
@@ -412,14 +412,15 @@
       pickEngine(function (en, err, isW, fallback) {
         if (!en) return toast(err, "");
         var go = function (en, isW) {
-          TOL = isW ? .6 : .75; STOL = isW ? .4 : .5;
+          TOL = isW ? .7 : .75; STOL = isW ? .45 : .5;
           if (isW) en.onInfo = function (k, m) {
             if (k === "error") toast("خطأ في المحرك: " + m, "", 6000);
+            else if (k === "slow") toast("المحرك بطيء على هذا الجهاز (" + m + " ث لجملة قصيرة). اقرأ بهدوء وبسكتات أطول بين الجمل.", "", 5000);
             else if (k === "text" && lsg("msDbg") === "1") toast("سمعتُ: " + m, "", 4000);
           };
-          if (isW && !lsg("msWhisper")) toast("جارٍ تحميل محرك Whisper لأول مرة…");
+          if (isW && !lsg("msQuran")) toast("جارٍ تحميل محرك التلاوة لأول مرة…");
           (en.ready || function (c) { c(true); })(function (good, why) {
-            if (!good) { if (!isW && fallback) return fallback_(); if (!isW && !navigator.onLine) return toast("لا يوجد إنترنت، ومحرك Whisper غير محمّل في هذا المتصفح. اتصل بالإنترنت ونزّله من الإعدادات (لكل متصفح تنزيله الخاص).", "", 8000); return toast((why || "المحرك غير جاهز") + (isW ? "" : "<br>" + OLBOX), ""); }
+            if (!good) { if (!isW && fallback) return fallback_(); if (!isW && !navigator.onLine) return toast("لا يوجد إنترنت، ومحرك التلاوة غير محمّل في هذا المتصفح. اتصل بالإنترنت ونزّله من الإعدادات (لكل متصفح تنزيله الخاص).", "", 8000); return toast((why || "المحرك غير جاهز") + (isW ? "" : "<br>" + OLBOX), ""); }
             toast(isW ? "المحرك جاهز. تحدّث، وتظهر الكلمات بعد كل جملة قصيرة." : "", "", 4000);
             st.rec = en; st.on = true; setLive(true);
             resetPage(); lock();
@@ -428,23 +429,23 @@
               en.start(onSpeech, function (e2) {
                 if (!st.on) return;
                 if (e2 === "not-allowed" || e2 === "service-not-allowed") { toast("اسمح للموقع باستخدام الميكروفون.", "", 7000); return stop(true); }
-                if ((e2 === "network" || e2 === "language-not-supported") && !isW && lsg("msWhisper")) {   /* انقطع الإنترنت أثناء التعرّف: ننتقل إلى Whisper المحمّل */
+                if ((e2 === "network" || e2 === "language-not-supported") && !isW && lsg("msQuran")) {   /* انقطع الإنترنت أثناء التعرّف: ننتقل إلى التلاوة المحمّل */
                   try { en.stop(); } catch (x) {}
-                  return loadWhisper(function (er) {
-                    if (er) { toast("تعذّر تحميل محرك Whisper.", "", 5000); return stop(true); }
-                    en = G.MusammiWhisper.engine(); isW = true; toast("تم التحويل إلى محرك Whisper (دون إنترنت)…");
-                    en.ready(function (good, why) { if (!good) { toast(why || "محرك Whisper غير جاهز", "", 6000); return stop(true); } st.rec = en; run(); });
+                  return loadQuran(function (er) {
+                    if (er) { toast("تعذّر تحميل محرك التلاوة.", "", 5000); return stop(true); }
+                    en = G.MusammiQuran.engine(); isW = true; toast("تم التحويل إلى محرك التلاوة (دون إنترنت)…");
+                    en.ready(function (good, why) { if (!good) { toast(why || "محرك التلاوة غير جاهز", "", 6000); return stop(true); } st.rec = en; run(); });
                   });
                 }
-                if (e2 === "network" || e2 === "language-not-supported") { toast("لا يعمل التعرّف الآن دون إنترنت. نزّل حزمة التسميع الآلي أو محرك Whisper من إعدادات التطبيق (مرة واحدة)، أو اتصل بالإنترنت وفعّل «السماح بالإنترنت».<br>" + OLBOX, ""); return stop(true); }
+                if (e2 === "network" || e2 === "language-not-supported") { toast("لا يعمل التعرّف الآن دون إنترنت. نزّل حزمة التسميع الآلي أو محرك التلاوة من إعدادات التطبيق (مرة واحدة)، أو اتصل بالإنترنت وفعّل «السماح بالإنترنت».<br>" + OLBOX, ""); return stop(true); }
                 setTimeout(run, 250);
               });
             };
             run();
-          }, function (pct) { toast("جارٍ تحميل محرك Whisper… " + arNum(pct) + "٪"); });
+          }, function (pct) { toast("جارٍ تحميل محرك التلاوة… " + arNum(pct) + "٪"); });
         };
         var fallback_ = function () { fallback(); };
-        if (!isW && fallback) { fallback_ = function () { loadWhisper(function (e3) { if (e3) return toast("تعذّر تحميل محرك Whisper.", "", 5000); go(G.MusammiWhisper.engine(), true); }); }; }
+        if (!isW && fallback) { fallback_ = function () { loadQuran(function (e3) { if (e3) return toast("تعذّر تحميل محرك التلاوة.", "", 5000); go(G.MusammiQuran.engine(), true); }); }; }
         go(en, isW);
       });
     });
@@ -511,8 +512,8 @@
   }
   function paintW() {
     var st = $("msWSt"), b = $("msWBtn"); if (!st || !b) return;
-    if (lsg("msWhisper")) { st.textContent = "✓ محرك Whisper محمّل، ويعمل التسميع الآلي دون إنترنت."; b.textContent = "المحرك محمّل ✓"; b.disabled = true; }
-    else { st.textContent = "المحرك غير محمّل بعد."; b.textContent = "تنزيل محرك Whisper"; b.disabled = false; }
+    if (lsg("msQuran")) { st.textContent = "✓ محرك التلاوة محمّل، ويعمل التسميع الآلي دون إنترنت."; b.textContent = "المحرك محمّل ✓"; b.disabled = true; }
+    else { st.textContent = "المحرك غير محمّل بعد."; b.textContent = "تنزيل محرك التلاوة"; b.disabled = false; }
   }
   function packUi() {
     var off = $("offSec"), host = off ? off.parentNode : null; if (!host || $("msPackSec")) return;
@@ -520,17 +521,17 @@
     sec.innerHTML = '<label>التسميع الآلي دون إنترنت</label><p class="sub">نزّل حزمة التعرّف على الصوت العربي مرة واحدة، ثم يعمل التسميع الآلي بلا إنترنت. تُحفظ على جهازك ولا يُرسل صوتك لأي خادم.</p><p class="sub" id="msPackSt" role="status" style="margin:8px 0;font-weight:600"></p><button type="button" id="msPackBtn" class="p" style="width:100%" disabled>تنزيل حزمة التسميع الآلي</button>';
     off.insertAdjacentElement("afterend", sec);
     var ws = document.createElement("div"); ws.className = "stg-sec"; ws.id = "msWSec";
-    ws.innerHTML = '<label>محرك Whisper (يعمل على كل الأجهزة)</label><p class="sub">إن لم يدعم جهازك حزمة المتصفح، نزّل محرك Whisper مرة واحدة (نحو ٨٠ ميجا، يُفضَّل واي فاي)، ثم يعمل التسميع الآلي بلا إنترنت على أي جهاز حديث. تجريبي: يعرض الكلمات بعد كل جملة قصيرة.</p><p class="sub" id="msWSt" role="status" style="margin:8px 0;font-weight:600"></p><button type="button" id="msWBtn" class="p" style="width:100%">تنزيل محرك Whisper</button><label style="display:flex;gap:6px;align-items:center;margin-top:10px;font-size:14px"><input type="checkbox" id="msWAlways"> استخدام Whisper دائمًا</label><label style="display:flex;gap:6px;align-items:center;margin-top:10px;font-size:14px"><input type="checkbox" id="msDbg"> وضع التشخيص: إظهار ما يسمعه المحرك</label><button type="button" id="msWTest" style="width:100%;margin-top:10px">اختبار الميكروفون والمحرك (٥ ثوانٍ)</button><p class="sub" id="msWTestOut" style="margin:8px 0 0;white-space:pre-line"></p><button type="button" id="msWChk" style="width:100%;margin-top:10px">فحص جاهزية العمل دون إنترنت</button><p class="sub" id="msWChkOut" style="margin:8px 0 0;white-space:pre-line"></p>';
+    ws.innerHTML = '<label>محرك التلاوة (يعمل على كل الأجهزة)</label><p class="sub">إن لم يدعم جهازك حزمة المتصفح، نزّل محرك التلاوة مرة واحدة (نحو ٩٠ ميجا، يُفضَّل واي فاي)، ثم يعمل التسميع الآلي بلا إنترنت على أي جهاز حديث. نموذج مدرَّب على تلاوة القرآن نفسها، ويعرض الكلمات بعد كل جملة قصيرة.</p><p class="sub" id="msWSt" role="status" style="margin:8px 0;font-weight:600"></p><button type="button" id="msWBtn" class="p" style="width:100%">تنزيل محرك التلاوة</button><label style="display:flex;gap:6px;align-items:center;margin-top:10px;font-size:14px"><input type="checkbox" id="msWAlways"> استخدام محرك التلاوة دائمًا</label><label style="display:flex;gap:6px;align-items:center;margin-top:10px;font-size:14px"><input type="checkbox" id="msDbg"> وضع التشخيص: إظهار ما يسمعه المحرك</label><button type="button" id="msWTest" style="width:100%;margin-top:10px">اختبار الميكروفون والمحرك (٥ ثوانٍ)</button><p class="sub" id="msWTestOut" style="margin:8px 0 0;white-space:pre-line"></p><button type="button" id="msWChk" style="width:100%;margin-top:10px">فحص جاهزية العمل دون إنترنت</button><p class="sub" id="msWChkOut" style="margin:8px 0 0;white-space:pre-line"></p>';
     sec.insertAdjacentElement("afterend", ws);
-    $("msWAlways").checked = lsg("msEng") === "whisper";
-    $("msWAlways").onchange = function () { lss("msEng", this.checked ? "whisper" : "auto"); };
+    $("msWAlways").checked = lsg("msEng") === "quran";
+    $("msWAlways").onchange = function () { lss("msEng", this.checked ? "quran" : "auto"); };
     $("msWBtn").onclick = function () {
       var b = this, st = $("msWSt");
       if (!navigator.onLine) { st.textContent = "اتصل بالإنترنت لتنزيل المحرك (مرة واحدة)."; return; }
       b.disabled = true; b.textContent = "جارٍ التنزيل…"; st.textContent = "جارٍ التنزيل… لا تُغلق التطبيق.";
-      loadWhisper(function (e) {
+      loadQuran(function (e) {
         if (e) { st.textContent = "تعذّر تحميل ملف المحرك."; b.disabled = false; b.textContent = "أعد المحاولة"; return; }
-        G.MusammiWhisper.load(function (pct) { st.textContent = "جارٍ التنزيل… " + arNum(pct) + "٪"; }).then(paintW, function () { st.textContent = "تعذّر التنزيل. تأكد من الإنترنت ومن توفر مساحة ثم أعد المحاولة."; b.disabled = false; b.textContent = "أعد المحاولة"; });
+        G.MusammiQuran.load(function (pct) { st.textContent = "جارٍ التنزيل… " + arNum(pct) + "٪"; }).then(paintW, function () { st.textContent = "تعذّر التنزيل. تأكد من الإنترنت ومن توفر مساحة ثم أعد المحاولة."; b.disabled = false; b.textContent = "أعد المحاولة"; });
       });
     };
     paintW();
@@ -543,9 +544,9 @@
     $("msDbg").onchange = function () { lss("msDbg", this.checked ? "1" : "0"); };
     $("msWTest").onclick = function () {
       var out = $("msWTestOut"), b = this; ac(); b.disabled = true; out.textContent = "جارٍ التسجيل ٥ ثوانٍ… قل: بسم الله الرحمن الرحيم";
-      loadWhisper(function (e) {
-        if (e) { b.disabled = false; out.textContent = "تعذّر تحميل ملف whisper-engine.js"; return; }
-        G.MusammiWhisper.test(5, function (r) {
+      loadQuran(function (e) {
+        if (e) { b.disabled = false; out.textContent = "تعذّر تحميل ملف quran-engine.js"; return; }
+        G.MusammiQuran.test(5, function (r) {
           b.disabled = false;
           out.textContent = "إصدار المسمّع: " + MSV + "\nحالة الصوت: " + (r.state || "؟") + "\nأعلى مستوى للصوت: " + r.level.toFixed(3) + "\n" + (r.err ? "✗ " + r.err : "زمن التحليل: " + (r.ms / 1000).toFixed(1) + " ث\nما فهمه المحرك: «" + (r.text || "لا شيء") + "»");
         });
@@ -553,18 +554,18 @@
     };
     $("msWChk").onclick = function () {
       var out = $("msWChkOut"); out.textContent = "جارٍ الفحص…";
-      loadWhisper(function (e) {
-        if (e) { out.textContent = "تعذّر تحميل ملف whisper-engine.js"; return; }
-        G.MusammiWhisper.check().then(function (r) {
+      loadQuran(function (e) {
+        if (e) { out.textContent = "تعذّر تحميل ملف quran-engine.js"; return; }
+        G.MusammiQuran.check().then(function (r) {
           var ok = function (v) { return v ? "✓" : "✗"; };
-          out.textContent = "إصدار المسمّع: " + MSV + "\n" + ok(r.sw) + " عامل الخدمة يعمل (يلزم لحفظ الملفات)\n" + ok(r.lib) + " مكتبة المحرك محفوظة\n" + ok(r.libs > 1) + " ملفات التشغيل (wasm) محفوظة: " + arNum(r.libs) + "\n" + ok(r.model >= 3) + " ملفات النموذج محفوظة: " + arNum(r.model) + "\n" + ok(r.flag) + " اكتمل التنزيل في هذا المتصفح" + (r.sw && r.lib && r.libs > 1 && r.model >= 3 && r.flag ? "\n\nجاهز للعمل دون إنترنت." : "\n\nأعد تنزيل المحرك وأنت متصل بالإنترنت، ثم أعد الفحص.");
+          out.textContent = "إصدار المسمّع: " + MSV + "\n" + ok(r.sw) + " عامل الخدمة يعمل (يلزم لحفظ الملفات)\n" + ok(r.lib) + " مكتبة المحرك محفوظة\n" + ok(r.libs > 1) + " ملفات التشغيل (wasm) محفوظة: " + arNum(r.libs) + "\n" + ok(r.model >= 2) + " ملفات النموذج محفوظة: " + arNum(r.model) + "\n" + ok(r.flag) + " اكتمل التنزيل في هذا المتصفح" + (r.sw && r.lib && r.libs > 1 && r.model >= 2 && r.flag ? "\n\nجاهز للعمل دون إنترنت." : "\n\nأعد تنزيل المحرك وأنت متصل بالإنترنت، ثم أعد الفحص.");
         });
       });
     };
     paintPack();
   }
   /* سؤال عند فتح التطبيق: نزّل محرك التسميع الآن؟ (مرة واحدة، ويُعاد بعد ٣ أيام إن اختار «لاحقًا»)
-     حزمة المتصفح إن دعمها جهازه، وإلا محرك Whisper الذي يعمل على كل الأجهزة */
+     حزمة المتصفح إن دعمها جهازه، وإلا محرك التلاوة الذي يعمل على كل الأجهزة */
   function askDialog(o) {
     var a = document.createElement("div"); a.id = "msAsk"; a.setAttribute("role", "dialog");
     a.innerHTML = '<b>' + o.title + '</b><p id="msAskP">' + o.text + '</p><div class="row"><button type="button" id="msAskGo" class="p">' + o.yes + '</button><button type="button" id="msAskX">لاحقًا</button></div>';
@@ -588,12 +589,12 @@
       var o = $("offAsk"), u = $("updBar");
       if (tries++ > 300) return;
       if ((o && !o.classList.contains("hide")) || (u && !u.classList.contains("hide"))) return setTimeout(wait, 2000);
-      if (lsg("msWhisper")) return;                       /* محرك Whisper محمّل: لا حاجة لسؤال */
+      if (lsg("msQuran")) return;                       /* محرك التلاوة محمّل: لا حاجة لسؤال */
       packStatus(function (x) {
         if (x === "available") return lss("msPackAsk", "done");
-        /* Whisper أولًا: يعمل على كل المتصفحات والأجهزة، أما حزمة المتصفح فتتوفر على بعضها فقط (وتبقى في الإعدادات) */
-        if (due("msWAsk")) return askDialog({ key: "msWAsk", title: "التسميع الآلي دون إنترنت", text: "لتعمل المراجعة بالتسميع الآلي دون إنترنت على أي جهاز ومتصفح، نزّل محرك Whisper الآن (نحو ٨٠ ميجا، مرة واحدة). يُفضَّل استخدام واي فاي.", yes: "نعم، نزّل المحرك",
-          install: function (prog, done) { loadWhisper(function (e) { if (e) return done(false, "تعذّر تحميل ملف المحرك. أعد المحاولة."); G.MusammiWhisper.load(function (pct) { prog(arNum(pct) + "٪"); }).then(function () { done(true); }, function () { done(false, "تعذّر التنزيل. تأكد من الإنترنت ومن توفر مساحة ثم أعد المحاولة."); }); }); } });
+        /* التلاوة أولًا: يعمل على كل المتصفحات والأجهزة، أما حزمة المتصفح فتتوفر على بعضها فقط (وتبقى في الإعدادات) */
+        if (due("msWAsk")) return askDialog({ key: "msWAsk", title: "التسميع الآلي دون إنترنت", text: "لتعمل المراجعة بالتسميع الآلي دون إنترنت على أي جهاز ومتصفح، نزّل محرك التلاوة الآن (نحو ٩٠ ميجا، مرة واحدة). يُفضَّل استخدام واي فاي.", yes: "نعم، نزّل المحرك",
+          install: function (prog, done) { loadQuran(function (e) { if (e) return done(false, "تعذّر تحميل ملف المحرك. أعد المحاولة."); G.MusammiQuran.load(function (pct) { prog(arNum(pct) + "٪"); }).then(function () { done(true); }, function () { done(false, "تعذّر التنزيل. تأكد من الإنترنت ومن توفر مساحة ثم أعد المحاولة."); }); }); } });
       });
     })();
   }

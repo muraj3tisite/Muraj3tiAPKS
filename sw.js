@@ -1,9 +1,9 @@
 /* غيّر رقم الإصدار عند كل تحديث تنشره: أي تغيير في هذا الملف يُظهر للمستخدمين رسالة «يتوفر تحديث» */
-var VERSION = "1.2.5";
+var VERSION = "1.3.0";
 var CACHE = "murajaati-" + VERSION;
 /* خطوط صفحات المصحف تُحفظ في مخزن دائم لا يُمسح عند تغيير الإصدار، حتى لا تُنزَّل (نحو ١٠٠ ميجا) من جديد */
 var FONTS = "mfonts-v1";
-/* مكتبة Whisper (jsdelivr) تُحفظ في مخزن دائم أيضًا، فلا تُمسح عند تحديث التطبيق */
+/* مكتبة تشغيل النموذج (jsdelivr) تُحفظ في مخزن دائم أيضًا، فلا تُمسح عند تحديث التطبيق. النموذج نفسه يحفظه quran-engine.js في مخزن خاص (mquran-v1) */
 var LIBS = "mext-v1";
 function store(url) { return /\/fonts\/p\d+\.woff$/.test(url) ? FONTS : (url.indexOf("https://cdn.jsdelivr.net/") === 0 ? LIBS : CACHE); }
 /* مواقع خارجية يحتاجها التطبيق ونخزّنها ليعمل دون إنترنت بعد أول فتح */
@@ -11,7 +11,7 @@ var EXT = ["cdn.jsdelivr.net", "fonts.googleapis.com", "fonts.gstatic.com", "cdn
 
 self.addEventListener("install", function (e) {
   e.waitUntil(caches.open(CACHE).then(function (c) {
-    return Promise.all(["./", "manifest.json", "robot.js?v=3", "musammi.js?v=15", "whisper-engine.js?v=4", "data/quran-text.json"].map(function (u) { return c.add(u).catch(function () {}); }));
+    return Promise.all(["./", "manifest.json", "robot.js?v=3", "musammi.js?v=16", "quran-engine.js?v=1", "data/quran-text.json"].map(function (u) { return c.add(u).catch(function () {}); }));
   }));
 });
 
