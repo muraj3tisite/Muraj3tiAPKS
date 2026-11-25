@@ -144,7 +144,7 @@
     return st.ac;
   }
   G.MusammiAC = function () { return ac(); };
-  var MSV = "1.3.0";   /* رقم إصدار المسمّع: يظهر في الفحص لنتأكد أي نسخة تعمل */
+  var MSV = "1.3.1";   /* رقم إصدار المسمّع: يظهر في الفحص لنتأكد أي نسخة تعمل */
   var TOL = .75, STOL = .5;   /* حدّ التشابه: أخفض قليلًا مع محرك التلاوة لأن نطقه يُكتب بإملاء المصحف العثماني */
   function beep() {
     var n = Date.now(); if (n - st.beepT < 600) return; st.beepT = n;
@@ -368,7 +368,7 @@
       var fb = function (why) { if (allowOnline()) { r.processLocally = false; return cb(true); } cb(false, why); };
       G.SpeechRecognition.available({ langs: ["ar-SA"], processLocally: true }).then(function (s) {
         if (s === "available") return cb(true);
-        if (s === "unavailable") return fb("حزمة العربية للتعرّف الصوتي غير متاحة على هذا الجهاز. نزّل حزمة التسميع الآلي من إعدادات التطبيق، أو فعّل «السماح بالإنترنت».");
+        if (s === "unavailable") return fb("حزمة العربية للتعرّف الصوتي غير متاحة على هذا الجهاز. نزّل محرك التلاوة من إعدادات التطبيق، أو فعّل «السماح بالإنترنت».");
         toast("جارٍ تنزيل حزمة التعرّف على العربية (مرة واحدة)…");
         G.SpeechRecognition.install({ langs: ["ar-SA"], processLocally: true }).then(function (ok) { ok ? cb(true) : fb("تعذّر تنزيل الحزمة"); }, function () { fb("تعذّر تنزيل الحزمة"); });
       }, function () { cb(true); });
@@ -388,6 +388,13 @@
   function arNum(n) { return String(n).replace(/\d/g, function (d) { return "٠١٢٣٤٥٦٧٨٩"[d]; }); }
   function lsg(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
   function lss(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
+  /* سبب فشل التنزيل بكلمات مفهومة، بدل رسالة عامة */
+  function whyFail(e) {
+    var m = String((e && e.message) || e || "");
+    if (/Failed to fetch|NetworkError|Load failed/i.test(m)) return "تعذّر الوصول إلى رابط النموذج. تأكد أن مستودع النموذج عام (Public) وأن الرابط صحيح.";
+    if (/Quota|storage|space/i.test(m)) return "لا تتسع ذاكرة المتصفح للنموذج. حرّر مساحة ثم أعد المحاولة.";
+    return m.slice(0, 160) || "سبب غير معروف";
+  }
   function loadQuran(cb) {
     if (G.MusammiQuran) return cb(null);
     var sc = document.createElement("script"); sc.src = "quran-engine.js?v=1";
@@ -416,7 +423,6 @@
           if (isW) en.onInfo = function (k, m) {
             if (k === "error") toast("خطأ في المحرك: " + m, "", 6000);
             else if (k === "slow") toast("المحرك بطيء على هذا الجهاز (" + m + " ث لجملة قصيرة). اقرأ بهدوء وبسكتات أطول بين الجمل.", "", 5000);
-            else if (k === "text" && lsg("msDbg") === "1") toast("سمعتُ: " + m, "", 4000);
           };
           if (isW && !lsg("msQuran")) toast("جارٍ تحميل محرك التلاوة لأول مرة…");
           (en.ready || function (c) { c(true); })(function (good, why) {
@@ -437,7 +443,7 @@
                     en.ready(function (good, why) { if (!good) { toast(why || "محرك التلاوة غير جاهز", "", 6000); return stop(true); } st.rec = en; run(); });
                   });
                 }
-                if (e2 === "network" || e2 === "language-not-supported") { toast("لا يعمل التعرّف الآن دون إنترنت. نزّل حزمة التسميع الآلي أو محرك التلاوة من إعدادات التطبيق (مرة واحدة)، أو اتصل بالإنترنت وفعّل «السماح بالإنترنت».<br>" + OLBOX, ""); return stop(true); }
+                if (e2 === "network" || e2 === "language-not-supported") { toast("لا يعمل التعرّف الآن دون إنترنت. نزّل محرك التلاوة من إعدادات التطبيق (مرة واحدة)، أو اتصل بالإنترنت وفعّل «السماح بالإنترنت».<br>" + OLBOX, ""); return stop(true); }
                 setTimeout(run, 250);
               });
             };
@@ -480,49 +486,16 @@
     if (vis) paintRobot();
     if (st.on && (!vis)) stop();
   }
-  /* ===== حزمة التعرّف على العربية: تُنزَّل مرة واحدة ثم يعمل التسميع الآلي دون إنترنت ===== */
-  var PK = { langs: ["ar-SA"], poll: null };
-  function packSupported() { var R = G.SpeechRecognition; return !!(R && R.available && R.install); }
-  /* cb("unsupported" | "available" | "downloadable" | "downloading" | "unavailable") */
-  function packStatus(cb) {
-    if (!packSupported()) return cb("unsupported");
-    G.SpeechRecognition.available({ langs: PK.langs, processLocally: true }).then(function (x) { cb(x); }, function () { cb("unsupported"); });
-  }
-  function packInstall(cb) {
-    if (!packSupported()) return cb(false);
-    G.SpeechRecognition.install({ langs: PK.langs, processLocally: true }).then(function (ok) { cb(!!ok); }, function () { cb(false); });
-  }
-  G.MusammiPack = { supported: packSupported, status: packStatus, install: packInstall };
-
-  function paintPack() {
-    var st = $("msPackSt"), b = $("msPackBtn"); if (!st || !b) return;
-    packStatus(function (x) {
-      b.disabled = true; b.textContent = "تنزيل حزمة التسميع الآلي";
-      if (x === "available") { st.textContent = "✓ الحزمة محمّلة على جهازك، والتسميع الآلي يعمل دون إنترنت."; b.textContent = "الحزمة محمّلة ✓"; clearInterval(PK.poll); }
-      else if (x === "downloadable") { st.textContent = "الحزمة غير محمّلة بعد. اتصل بالإنترنت ثم اضغط التنزيل (مرة واحدة فقط)."; b.disabled = false; }
-      else if (x === "downloading") { st.textContent = "جارٍ تنزيل الحزمة… لا تُغلق التطبيق."; b.textContent = "جارٍ التنزيل…"; if (!PK.poll) PK.poll = setInterval(paintPack, 2000); }
-      else if (x === "unavailable") st.textContent = "اللغة العربية للتعرّف المحلي غير متاحة على هذا الجهاز. يمكنك استخدام التعرّف عبر الإنترنت عند الحاجة.";
-      else st.textContent = "هذا المتصفح لا يدعم تنزيل حزمة التعرّف. استخدم Chrome حديثًا (أندرويد أو حاسوب).";
-      if (x !== "downloading" && PK.poll) { clearInterval(PK.poll); PK.poll = null; }
-    });
-  }
-  function doInstall(onDone) {
-    if (!navigator.onLine) return onDone(false, "لا يوجد اتصال بالإنترنت. اتصل ثم أعد المحاولة.");
-    packInstall(function (ok) { onDone(ok, ok ? "" : "تعذّر التنزيل. تأكد من الإنترنت ومن توفر مساحة ثم أعد المحاولة."); });
-  }
   function paintW() {
     var st = $("msWSt"), b = $("msWBtn"); if (!st || !b) return;
     if (lsg("msQuran")) { st.textContent = "✓ محرك التلاوة محمّل، ويعمل التسميع الآلي دون إنترنت."; b.textContent = "المحرك محمّل ✓"; b.disabled = true; }
     else { st.textContent = "المحرك غير محمّل بعد."; b.textContent = "تنزيل محرك التلاوة"; b.disabled = false; }
   }
   function packUi() {
-    var off = $("offSec"), host = off ? off.parentNode : null; if (!host || $("msPackSec")) return;
-    var sec = document.createElement("div"); sec.className = "stg-sec"; sec.id = "msPackSec";
-    sec.innerHTML = '<label>التسميع الآلي دون إنترنت</label><p class="sub">نزّل حزمة التعرّف على الصوت العربي مرة واحدة، ثم يعمل التسميع الآلي بلا إنترنت. تُحفظ على جهازك ولا يُرسل صوتك لأي خادم.</p><p class="sub" id="msPackSt" role="status" style="margin:8px 0;font-weight:600"></p><button type="button" id="msPackBtn" class="p" style="width:100%" disabled>تنزيل حزمة التسميع الآلي</button>';
-    off.insertAdjacentElement("afterend", sec);
+    var off = $("offSec"), host = off ? off.parentNode : null; if (!host || $("msWSec")) return;
     var ws = document.createElement("div"); ws.className = "stg-sec"; ws.id = "msWSec";
-    ws.innerHTML = '<label>محرك التلاوة (يعمل على كل الأجهزة)</label><p class="sub">إن لم يدعم جهازك حزمة المتصفح، نزّل محرك التلاوة مرة واحدة (نحو ٩٠ ميجا، يُفضَّل واي فاي)، ثم يعمل التسميع الآلي بلا إنترنت على أي جهاز حديث. نموذج مدرَّب على تلاوة القرآن نفسها، ويعرض الكلمات بعد كل جملة قصيرة.</p><p class="sub" id="msWSt" role="status" style="margin:8px 0;font-weight:600"></p><button type="button" id="msWBtn" class="p" style="width:100%">تنزيل محرك التلاوة</button><label style="display:flex;gap:6px;align-items:center;margin-top:10px;font-size:14px"><input type="checkbox" id="msWAlways"> استخدام محرك التلاوة دائمًا</label><label style="display:flex;gap:6px;align-items:center;margin-top:10px;font-size:14px"><input type="checkbox" id="msDbg"> وضع التشخيص: إظهار ما يسمعه المحرك</label><button type="button" id="msWTest" style="width:100%;margin-top:10px">اختبار الميكروفون والمحرك (٥ ثوانٍ)</button><p class="sub" id="msWTestOut" style="margin:8px 0 0;white-space:pre-line"></p><button type="button" id="msWChk" style="width:100%;margin-top:10px">فحص جاهزية العمل دون إنترنت</button><p class="sub" id="msWChkOut" style="margin:8px 0 0;white-space:pre-line"></p>';
-    sec.insertAdjacentElement("afterend", ws);
+    ws.innerHTML = '<label>محرك التلاوة (يعمل على كل الأجهزة)</label><p class="sub">نزّل محرك التلاوة مرة واحدة (نحو ٩٠ ميجا، يُفضَّل واي فاي)، ثم يعمل التسميع الآلي بلا إنترنت على أي جهاز حديث. نموذج مدرَّب على تلاوة القرآن نفسها، ويعرض الكلمات بعد كل جملة قصيرة.</p><p class="sub" id="msWSt" role="status" style="margin:8px 0;font-weight:600"></p><button type="button" id="msWBtn" class="p" style="width:100%">تنزيل محرك التلاوة</button><label style="display:flex;gap:6px;align-items:center;margin-top:10px;font-size:14px"><input type="checkbox" id="msWAlways"> استخدام محرك التلاوة دائمًا</label><button type="button" id="msWTest" style="width:100%;margin-top:10px">اختبار الميكروفون والمحرك (٥ ثوانٍ)</button><p class="sub" id="msWTestOut" style="margin:8px 0 0;white-space:pre-line"></p><button type="button" id="msWChk" style="width:100%;margin-top:10px">فحص جاهزية العمل دون إنترنت</button><p class="sub" id="msWChkOut" style="margin:8px 0 0;white-space:pre-line"></p>';
+    off.insertAdjacentElement("afterend", ws);
     $("msWAlways").checked = lsg("msEng") === "quran";
     $("msWAlways").onchange = function () { lss("msEng", this.checked ? "quran" : "auto"); };
     $("msWBtn").onclick = function () {
@@ -531,17 +504,11 @@
       b.disabled = true; b.textContent = "جارٍ التنزيل…"; st.textContent = "جارٍ التنزيل… لا تُغلق التطبيق.";
       loadQuran(function (e) {
         if (e) { st.textContent = "تعذّر تحميل ملف المحرك."; b.disabled = false; b.textContent = "أعد المحاولة"; return; }
-        G.MusammiQuran.load(function (pct) { st.textContent = "جارٍ التنزيل… " + arNum(pct) + "٪"; }).then(paintW, function () { st.textContent = "تعذّر التنزيل. تأكد من الإنترنت ومن توفر مساحة ثم أعد المحاولة."; b.disabled = false; b.textContent = "أعد المحاولة"; });
+        G.MusammiQuran.load(function (pct) { st.textContent = "جارٍ التنزيل… " + arNum(pct) + "٪"; }).then(paintW, function (e) { st.textContent = "تعذّر التنزيل: " + whyFail(e); b.disabled = false; b.textContent = "أعد المحاولة"; });
       });
     };
     paintW();
-    $("msPackBtn").onclick = function () {
-      var b = this, st = $("msPackSt"); b.disabled = true; b.textContent = "جارٍ التنزيل…"; st.textContent = "جارٍ تنزيل الحزمة… لا تُغلق التطبيق.";
-      doInstall(function (ok, why) { if (!ok) { paintPack(); st.textContent = why; } else { try { localStorage.setItem("msPackAsk", "done"); } catch (e) {} paintPack(); } });
-    };
-    ["setBtn", "setBtn2"].forEach(function (id) { var e = $(id); if (e) e.addEventListener("click", function () { paintPack(); paintW(); }); });
-    $("msDbg").checked = lsg("msDbg") === "1";
-    $("msDbg").onchange = function () { lss("msDbg", this.checked ? "1" : "0"); };
+    ["setBtn", "setBtn2"].forEach(function (id) { var e = $(id); if (e) e.addEventListener("click", function () { paintW(); }); });
     $("msWTest").onclick = function () {
       var out = $("msWTestOut"), b = this; ac(); b.disabled = true; out.textContent = "جارٍ التسجيل ٥ ثوانٍ… قل: بسم الله الرحمن الرحيم";
       loadQuran(function (e) {
@@ -562,7 +529,6 @@
         });
       });
     };
-    paintPack();
   }
   /* سؤال عند فتح التطبيق: نزّل محرك التسميع الآن؟ (مرة واحدة، ويُعاد بعد ٣ أيام إن اختار «لاحقًا»)
      حزمة المتصفح إن دعمها جهازه، وإلا محرك التلاوة الذي يعمل على كل الأجهزة */
@@ -576,7 +542,7 @@
     go.onclick = function () {
       go.disabled = true; go.textContent = "جارٍ التنزيل…"; p.textContent = "لا تُغلق التطبيق حتى يكتمل التنزيل.";
       o.install(function (txt) { p.textContent = "جارٍ التنزيل… " + txt; }, function (ok, why) {
-        if (ok) { lss(o.key, "done"); p.textContent = "تم! يعمل التسميع الآلي الآن دون إنترنت."; go.hidden = true; no.textContent = "إغلاق"; setTimeout(function () { a.remove(); }, 3500); paintPack(); paintW(); }
+        if (ok) { lss(o.key, "done"); p.textContent = "تم! يعمل التسميع الآلي الآن دون إنترنت."; go.hidden = true; no.textContent = "إغلاق"; setTimeout(function () { a.remove(); }, 3500); paintW(); }
         else { p.textContent = why; go.disabled = false; go.textContent = "أعد المحاولة"; }
       });
     };
@@ -590,12 +556,8 @@
       if (tries++ > 300) return;
       if ((o && !o.classList.contains("hide")) || (u && !u.classList.contains("hide"))) return setTimeout(wait, 2000);
       if (lsg("msQuran")) return;                       /* محرك التلاوة محمّل: لا حاجة لسؤال */
-      packStatus(function (x) {
-        if (x === "available") return lss("msPackAsk", "done");
-        /* التلاوة أولًا: يعمل على كل المتصفحات والأجهزة، أما حزمة المتصفح فتتوفر على بعضها فقط (وتبقى في الإعدادات) */
         if (due("msWAsk")) return askDialog({ key: "msWAsk", title: "التسميع الآلي دون إنترنت", text: "لتعمل المراجعة بالتسميع الآلي دون إنترنت على أي جهاز ومتصفح، نزّل محرك التلاوة الآن (نحو ٩٠ ميجا، مرة واحدة). يُفضَّل استخدام واي فاي.", yes: "نعم، نزّل المحرك",
-          install: function (prog, done) { loadQuran(function (e) { if (e) return done(false, "تعذّر تحميل ملف المحرك. أعد المحاولة."); G.MusammiQuran.load(function (pct) { prog(arNum(pct) + "٪"); }).then(function () { done(true); }, function () { done(false, "تعذّر التنزيل. تأكد من الإنترنت ومن توفر مساحة ثم أعد المحاولة."); }); }); } });
-      });
+          install: function (prog, done) { loadQuran(function (e) { if (e) return done(false, "تعذّر تحميل ملف المحرك. أعد المحاولة."); G.MusammiQuran.load(function (pct) { prog(arNum(pct) + "٪"); }).then(function () { done(true); }, function (e) { done(false, "تعذّر التنزيل: " + whyFail(e)); }); }); } });
     })();
   }
 
