@@ -1,15 +1,15 @@
 /* غيّر رقم الإصدار عند كل تحديث تنشره: أي تغيير في هذا الملف يُظهر للمستخدمين رسالة «يتوفر تحديث» */
-var VERSION = "1.1.9";
+var VERSION = "1.2.0";
 var CACHE = "murajaati-" + VERSION;
 /* خطوط صفحات المصحف تُحفظ في مخزن دائم لا يُمسح عند تغيير الإصدار، حتى لا تُنزَّل (نحو ١٠٠ ميجا) من جديد */
 var FONTS = "mfonts-v1";
 function store(url) { return /\/fonts\/p\d+\.woff$/.test(url) ? FONTS : CACHE; }
 /* مواقع خارجية يحتاجها التطبيق ونخزّنها ليعمل دون إنترنت بعد أول فتح */
-var EXT = ["fonts.googleapis.com", "fonts.gstatic.com", "cdnjs.cloudflare.com", "www.gstatic.com"];
+var EXT = ["cdn.jsdelivr.net", "fonts.googleapis.com", "fonts.gstatic.com", "cdnjs.cloudflare.com", "www.gstatic.com"];
 
 self.addEventListener("install", function (e) {
   e.waitUntil(caches.open(CACHE).then(function (c) {
-    return Promise.all(["./", "manifest.json", "robot.js?v=2", "musammi.js?v=9", "data/quran-text.json"].map(function (u) { return c.add(u).catch(function () {}); }));
+    return Promise.all(["./", "manifest.json", "robot.js?v=2", "musammi.js?v=10", "whisper-engine.js?v=1", "data/quran-text.json"].map(function (u) { return c.add(u).catch(function () {}); }));
   }));
 });
 
