@@ -92,8 +92,7 @@
   var $ = function (i) { return document.getElementById(i); };
   function allowOnline() { try { return localStorage.getItem("msOnline") === "1"; } catch (e) { return false; } }
   var Q = null, W = [];
-  var re = {};   /* مرات إعادة قراءة كل آية */
-  var st = { erred: false, on: false, rec: null, pos: -1, fin: [], itx: [], j: 0, tm: null, tt: null, errs: 0, s0: -1, beepT: 0, ac: null, g: "" };
+  var st = { max: 0, rr: false, erred: false, on: false, rec: null, pos: -1, fin: [], itx: [], j: 0, tm: null, tt: null, errs: 0, s0: -1, beepT: 0, ac: null, g: "" };
   function gN(m, f) { var w = G.MRobot && G.MRobot.who(); return w && w.g === "f" ? f : m; }
 
   function css() {
@@ -117,7 +116,7 @@
       ".tj-hideaya:not(.tj-hidden) .aya-t .qw.wrev .tj-c-jawaz{color:var(--tj-jawaz)!important}.tj-hideaya:not(.tj-hidden) .aya-t .qw.wrev .tj-c-madd2{color:var(--tj-madd2)!important}" +
       ".tj-hideaya:not(.tj-hidden) .aya-t .qw.wrev .tj-c-ghunna{color:var(--tj-ghunna)!important}.tj-hideaya:not(.tj-hidden) .aya-t .qw.wrev .tj-c-gray{color:var(--tj-gray)!important}" +
       ".tj-hideaya:not(.tj-hidden) .aya-t .qw.wrev .tj-c-tafkhim{color:var(--tj-tafkhim)!important}.tj-hideaya:not(.tj-hidden) .aya-t .qw.wrev .tj-c-qalqala{color:var(--tj-qalqala)!important}" +
-      ".aya-num.reread{position:relative}.aya-num.reread::after{content:'↻ ' attr(data-re);position:absolute;top:-1.05em;left:50%;transform:translateX(-50%);font:700 .5em/1.5 system-ui,sans-serif;white-space:nowrap;background:var(--gold,#d4a017);color:#fff;border-radius:99px;padding:0 .6em;box-shadow:0 1px 3px rgba(0,0,0,.3);direction:rtl}" +
+      ".qw.wre{background:rgba(212,160,23,.2);box-shadow:0 0 0 1.5px rgba(212,160,23,.6);border-radius:.3em}.qw.wcur{background:rgba(212,160,23,.42);box-shadow:0 0 0 2px rgba(212,160,23,.95);border-radius:.3em;transition:background .2s}" +
       ".ms-lock .qw.wrev{animation:msIn .6s cubic-bezier(.22,1.25,.36,1) both}" +
       "@keyframes msIn{0%{opacity:0;transform:translateY(7px) scale(.82);filter:blur(3px) drop-shadow(0 0 0 rgba(212,160,23,0))}55%{opacity:1;filter:blur(0) drop-shadow(0 0 7px rgba(212,160,23,.75))}100%{opacity:1;transform:none;filter:none}}.tj-hideaya.ms-lock .aya-num{pointer-events:none}" +
       "@media(prefers-reduced-motion:reduce){#msBtn.live,.ms-lock .qw.wrev{animation:none}}";
@@ -182,7 +181,7 @@
     return out;
   }
   function reveal(i) { var w = W[i]; if (w) w.els.forEach(function (e) { e.classList.add("wrev"); }); }
-  function clearRev() { [].forEach.call(document.querySelectorAll("#mushafText .wrev"), function (e) { e.classList.remove("wrev"); }); }
+  function clearRev() { [].forEach.call(document.querySelectorAll("#mushafText .wrev,#mushafText .wre,#mushafText .wcur"), function (e) { e.classList.remove("wrev", "wre", "wcur"); }); }
   function lock() {
     var sh = $("mushafSheet"); sh.classList.add("tj-hideaya", "ms-lock");
     try { sh.style.setProperty("--ms-ink", getComputedStyle($("mushafText")).color); } catch (e) {}
@@ -251,16 +250,16 @@
     }
     return best;
   }
-  /* علامة «أعاد قراءة الآية»: شارة ↻ ورقم المرات بجانب رقم الآية */
-  function arNum(n) { return String(n).replace(/\d/g, function (d) { return "٠١٢٣٤٥٦٧٨٩"[d]; }); }
-  function markReread(p) {
-    var w = W[p]; if (!w || w.loose) return;
-    var k = w.k; re[k] = (re[k] || 0) + 1;
-    var n = document.querySelector('#mushafText .aya-num[data-a="' + k + '"]');
-    if (n) { n.classList.add("reread"); n.setAttribute("data-re", arNum(re[k])); }
-    toast("↻ " + gN("أعدتَ", "أعدتِ") + " قراءة الآية " + arNum(k.split(":")[1]), "ok", 2500);
+  /* إعادة القراءة: إطار شفاف على الكلمات المُعادة، ومؤشر أقوى على الكلمة التي وصل إليها الآن */
+  function setCur(i) {
+    [].forEach.call(document.querySelectorAll("#mushafText .wcur"), function (e) { e.classList.remove("wcur"); });
+    var w = W[i]; if (w) w.els.forEach(function (e) { e.classList.add("wcur"); });
   }
-
+  function markRe(a, b) { for (var i = a; i < b; i++) if (W[i]) W[i].els.forEach(function (e) { e.classList.add("wre"); }); if (b > a) setCur(b - 1); }
+  function adv() {   /* بعد كل تقدّم: إن بلغ القارئ أبعد نقطة وصل إليها سابقًا انتهت الإعادة */
+    if (st.pos > st.max) st.max = st.pos;
+    if (st.rr && st.pos >= st.max) { st.rr = false; [].forEach.call(document.querySelectorAll("#mushafText .wcur"), function (e) { e.classList.remove("wcur"); }); }
+  }
   function step(final) {
     if (!st.on) return;
     var T = st.fin.concat(st.itx), avail, stable, r, jp, a;
@@ -284,7 +283,8 @@
       r = tryAt(st.pos, T, st.j);
       if (r) {
         for (a = 0; a < r.adv; a++) reveal(st.pos + a);
-        st.pos += r.adv; st.j += r.tok; st.erred = false;
+        if (st.rr) markRe(st.pos, st.pos + r.adv);
+        st.pos += r.adv; st.j += r.tok; st.erred = false; adv();
         if (st.pos >= W.length) return done();
         continue;
       }
@@ -294,13 +294,15 @@
       if (!w.loose && !w.names && soft(w.t, T[st.j])) {
         if (T[st.j + 1] === undefined && !final) break;
         var r2 = tryAt(st.pos + 1, T, st.j + 1);
-        if (r2) { reveal(st.pos); st.pos++; st.j++; st.erred = false; continue; }
+        if (r2) { reveal(st.pos); if (st.rr) markRe(st.pos, st.pos + 1); st.pos++; st.j++; st.erred = false; adv(); continue; }
       }
       jp = findJump(T, avail);
       if (jp) {
-        if (jp.p < st.pos) markReread(jp.p);
         for (a = jp.p; a < jp.q; a++) reveal(a);
-        st.pos = jp.q; st.j = jp.j; st.erred = false;
+        if (st.pos > st.max) st.max = st.pos;
+        st.rr = jp.p < st.pos;   /* قفزة للخلف = إعادة قراءة */
+        if (st.rr) markRe(jp.p, jp.q);
+        st.pos = jp.q; st.j = jp.j; st.erred = false; adv();
         if (st.pos >= W.length) return done();
         continue;
       }
@@ -366,7 +368,7 @@
   }
 
   function resetPage() {
-    st.fin = []; st.itx = []; st.j = 0; st.pos = -1; st.s0 = -1; st.errs = 0; st.erred = false; re = {}; clearTimeout(st.tm);
+    st.fin = []; st.itx = []; st.j = 0; st.pos = -1; st.s0 = -1; st.errs = 0; st.erred = false; st.max = 0; st.rr = false; clearTimeout(st.tm);
     W = buildWords();
     if (st.on) lock();
   }
