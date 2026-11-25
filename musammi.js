@@ -144,7 +144,7 @@
     return st.ac;
   }
   G.MusammiAC = function () { return ac(); };
-  var MSV = "1.3.2";   /* رقم إصدار المسمّع: يظهر في الفحص لنتأكد أي نسخة تعمل */
+  var MSV = "1.3.3";   /* رقم إصدار المسمّع: يظهر في الفحص لنتأكد أي نسخة تعمل */
   var TOL = .75, STOL = .5;   /* حدّ التشابه: أخفض قليلًا مع محرك التلاوة لأن نطقه يُكتب بإملاء المصحف العثماني */
   function beep() {
     var n = Date.now(); if (n - st.beepT < 600) return; st.beepT = n;
@@ -328,7 +328,7 @@
     var tk = toks(t);
     if (fin) { st.fin = st.fin.concat(tk); st.itx = []; } else st.itx = tk;
     step(fin);
-    clearTimeout(st.tm); st.tm = setTimeout(function () { step(true); }, 1000);
+    clearTimeout(st.tm); st.tm = setTimeout(function () { step(true); }, st.tmo || 1000);
   }
   function altScore(tk) {
     var T = st.fin.concat(tk), s = Math.min(st.j, st.fin.length), p, best = 0, r;
@@ -397,7 +397,7 @@
   }
   function loadQuran(cb) {
     if (G.MusammiQuran) return cb(null);
-    var sc = document.createElement("script"); sc.src = "quran-engine.js?v=2";
+    var sc = document.createElement("script"); sc.src = "quran-engine.js?v=3";
     sc.onload = function () { cb(G.MusammiQuran ? null : 1); }; sc.onerror = function () { cb(1); };
     document.head.appendChild(sc);
   }
@@ -419,15 +419,15 @@
       pickEngine(function (en, err, isW, fallback) {
         if (!en) return toast(err, "");
         var go = function (en, isW) {
-          TOL = isW ? .7 : .75; STOL = isW ? .45 : .5;
+          TOL = isW ? .7 : .75; STOL = isW ? .45 : .5; st.tmo = isW ? 2600 : 1000;
           if (isW) en.onInfo = function (k, m) {
             if (k === "error") toast("خطأ في المحرك: " + m, "", 6000);
-            else if (k === "slow") toast("المحرك بطيء على هذا الجهاز (" + m + " ث لجملة قصيرة). اقرأ بهدوء وبسكتات أطول بين الجمل.", "", 5000);
+            else if (k === "slow") toast("المحرك أبطأ من سرعة قراءتك على هذا الجهاز، فقد تتأخر الكلمات قليلًا. اقرأ بهدوء.", "", 5000);
           };
           if (isW && !lsg("msQuran")) toast("جارٍ تحميل محرك التلاوة لأول مرة…");
           (en.ready || function (c) { c(true); })(function (good, why) {
             if (!good) { if (!isW && fallback) return fallback_(); if (!isW && !navigator.onLine) return toast("لا يوجد إنترنت، ومحرك التلاوة غير محمّل في هذا المتصفح. اتصل بالإنترنت ونزّله من الإعدادات (لكل متصفح تنزيله الخاص).", "", 8000); return toast((why || "المحرك غير جاهز") + (isW ? "" : "<br>" + OLBOX), ""); }
-            toast(isW ? "المحرك جاهز. تحدّث، وتظهر الكلمات بعد كل جملة قصيرة." : "", "", 4000);
+            toast(isW ? "المحرك جاهز. تحدّث، وتظهر الكلمات كلمةً كلمة." : "", "", 4000);
             st.rec = en; st.on = true; setLive(true);
             resetPage(); lock();
             var run = function () {
@@ -494,7 +494,7 @@
   function packUi() {
     var off = $("offSec"), host = off ? off.parentNode : null; if (!host || $("msWSec")) return;
     var ws = document.createElement("div"); ws.className = "stg-sec"; ws.id = "msWSec";
-    ws.innerHTML = '<label>محرك التلاوة (يعمل على كل الأجهزة)</label><p class="sub">نزّل محرك التلاوة مرة واحدة (نحو ٩٠ ميجا، يُفضَّل واي فاي)، ثم يعمل التسميع الآلي بلا إنترنت على أي جهاز حديث. نموذج مدرَّب على تلاوة القرآن نفسها، ويعرض الكلمات بعد كل جملة قصيرة.</p><p class="sub" style="font-size:12px">النموذج: NVIDIA FastConformer عبر مشروع Tilawa (ترخيص CC-BY-4.0).</p><p class="sub" id="msWSt" role="status" style="margin:8px 0;font-weight:600"></p><button type="button" id="msWBtn" class="p" style="width:100%">تنزيل محرك التلاوة</button><label style="display:flex;gap:6px;align-items:center;margin-top:10px;font-size:14px"><input type="checkbox" id="msWAlways"> استخدام محرك التلاوة دائمًا</label><button type="button" id="msWTest" style="width:100%;margin-top:10px">اختبار الميكروفون والمحرك (٥ ثوانٍ)</button><p class="sub" id="msWTestOut" style="margin:8px 0 0;white-space:pre-line"></p><button type="button" id="msWChk" style="width:100%;margin-top:10px">فحص جاهزية العمل دون إنترنت</button><p class="sub" id="msWChkOut" style="margin:8px 0 0;white-space:pre-line"></p>';
+    ws.innerHTML = '<label>محرك التلاوة (يعمل على كل الأجهزة)</label><p class="sub">نزّل محرك التلاوة مرة واحدة (نحو ٩٠ ميجا، يُفضَّل واي فاي)، ثم يعمل التسميع الآلي بلا إنترنت على أي جهاز حديث. نموذج مدرَّب على تلاوة القرآن نفسها، ويعرض الكلمات كلمةً كلمة أثناء التلاوة.</p><p class="sub" style="font-size:12px">النموذج: NVIDIA FastConformer عبر مشروع Tilawa (ترخيص CC-BY-4.0).</p><p class="sub" id="msWSt" role="status" style="margin:8px 0;font-weight:600"></p><button type="button" id="msWBtn" class="p" style="width:100%">تنزيل محرك التلاوة</button><label style="display:flex;gap:6px;align-items:center;margin-top:10px;font-size:14px"><input type="checkbox" id="msWAlways"> استخدام محرك التلاوة دائمًا</label><button type="button" id="msWTest" style="width:100%;margin-top:10px">اختبار الميكروفون والمحرك (٥ ثوانٍ)</button><p class="sub" id="msWTestOut" style="margin:8px 0 0;white-space:pre-line"></p><button type="button" id="msWChk" style="width:100%;margin-top:10px">فحص جاهزية العمل دون إنترنت</button><p class="sub" id="msWChkOut" style="margin:8px 0 0;white-space:pre-line"></p>';
     off.insertAdjacentElement("afterend", ws);
     $("msWAlways").checked = lsg("msEng") === "quran";
     $("msWAlways").onchange = function () { lss("msEng", this.checked ? "quran" : "auto"); };
@@ -515,7 +515,7 @@
         if (e) { b.disabled = false; out.textContent = "تعذّر تحميل ملف quran-engine.js"; return; }
         G.MusammiQuran.test(5, function (r) {
           b.disabled = false;
-          out.textContent = "إصدار المسمّع: " + MSV + "\nحالة الصوت: " + (r.state || "؟") + "\nأعلى مستوى للصوت: " + r.level.toFixed(3) + "\n" + (r.err ? "✗ " + r.err : "زمن التحليل: " + (r.ms / 1000).toFixed(1) + " ث\nما فهمه المحرك: «" + (r.text || "لا شيء") + "»");
+          out.textContent = "إصدار المسمّع: " + MSV + "\nحالة الصوت: " + (r.state || "؟") + "\nأعلى مستوى للصوت: " + r.level.toFixed(3) + "\n" + (r.err ? "✗ " + r.err : "زمن التحليل: " + (r.ms / 1000).toFixed(1) + " ث لتسجيل " + arNum(r.secs) + " ث (" + (r.ms / 1000 / r.secs <= 1 ? "أسرع من الصوت ✓" : "أبطأ من الصوت") + ")\nما فهمه المحرك: «" + (r.text || "لا شيء") + "»");
         });
       });
     };

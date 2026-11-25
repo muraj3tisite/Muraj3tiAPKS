@@ -99,17 +99,28 @@
     for (k = 0; k < p.length; k++) if (/^(<blank>|<blk>|\[blank\]|<ctc_blank>)$/i.test(p[k])) { blank = k; break; }
     return { p: p, blank: blank };
   }
-  function decode(o, vocab) {
+  /* فكّ ترميز CTC مع توقيت كل كلمة (بالثواني من بداية المقطع): تبدأ الكلمة عند رمز يبدأ بـ ▁ */
+  function decodeTimed(o, vocab, secs) {
     var dims = o.dims, V = dims[dims.length - 1], T = dims[dims.length - 2], d = o.data, blank = vocab.blank >= 0 ? vocab.blank : V - 1;
-    var prev = -1, res = [], t, v, b, bi, best, x;
+    var stride = secs / Math.max(1, T), prev = -1, words = [], cur = null, t, v, b, bi, best, x, body, starts;
     for (t = 0; t < T; t++) {
       b = t * V; bi = 0; best = d[b];
       for (v = 1; v < V; v++) { x = d[b + v]; if (x > best) { best = x; bi = v; } }
-      if (bi !== prev && bi !== blank) { x = vocab.p[bi] || ""; if (!/^<.*>$/.test(x)) res.push(x); }
+      if (bi !== prev && bi !== blank) {
+        x = vocab.p[bi] || "";
+        if (!/^<.*>$/.test(x)) {
+          starts = x.charAt(0) === "\u2581"; body = x.replace(/\u2581/g, "");
+          if (starts && !body) cur = null;                       /* رمز فاصل وحده */
+          else if (starts || !cur) { cur = { t: body, f0: t, f1: t }; words.push(cur); }
+          else { cur.t += body; cur.f1 = t; }
+        }
+      }
       prev = bi;
     }
-    return res.join("").replace(/\u2581/g, " ").replace(/\s+/g, " ").trim();
+    words = words.filter(function (w) { return w.t; }).map(function (w) { return { t: w.t, s: w.f0 * stride, e: (w.f1 + 1) * stride + 0.12 }; });
+    return { words: words, text: words.map(function (w) { return w.t; }).join(" ") };
   }
+  function decode(o, vocab) { return decodeTimed(o, vocab, 1).text; }
 
   /* ===== تحميل النموذج وتشغيله ===== */
   var sess = null, loading = null;
@@ -142,84 +153,125 @@
     }, function (e) { loading = null; throw e; });
     return loading;
   }
-  /* تحليل مقطع صوتي (Float32 بمعدل 16 كيلوهرتز) إلى نص عربي */
-  function run(x, audio) {
+  /* تحليل مقطع صوتي (Float32 بمعدل 16 كيلوهرتز): يُرجع {words, text} */
+  function runT(x, audio) {
     var ort = x.ort, ins = x.s.inputNames, feeds = {}, n = audio.length;
     var a = ins.indexOf("audio_signal") >= 0 ? "audio_signal" : ins[0], l = ins.indexOf("length") >= 0 ? "length" : ins[1];
     feeds[a] = new ort.Tensor("float32", audio, [1, n]);
     if (l) feeds[l] = new ort.Tensor("int64", BigInt64Array.from([BigInt(n)]), [1]);
-    return x.s.run(feeds).then(function (r) { return decode(r[x.s.outputNames[0]], x.v); });
+    return x.s.run(feeds).then(function (r) { return decodeTimed(r[x.s.outputNames[0]], x.v, n / 16000); });
   }
+  function run(x, audio) { return runT(x, audio).then(function (r) { return r.text; }); }
 
-  /* ===== التقاط الصوت وتقطيعه عند السكتات ===== */
+  /* ===== التقاط الصوت ===== */
   function resample(a, from, to) {
     if (from === to) return a;
     var n = Math.round(a.length * to / from), o = new Float32Array(n), r = from / to, i, p, j, f;
     for (i = 0; i < n; i++) { p = i * r; j = Math.floor(p); f = p - j; o[i] = a[j] * (1 - f) + (a[j + 1] === undefined ? a[j] : a[j + 1]) * f; }
     return o;
   }
+  /* تحويل المعدل أثناء البث دون انقطاع عند حدود الإطارات */
+  function rsStream(from, to) {
+    if (from === to) return function (a) { return a; };
+    var step = from / to, pos = 0, last = 0;
+    return function (a) {
+      var n = a.length, o = [], p = pos, j, f, x0;
+      while (p < n - 1) { j = Math.floor(p); f = p - j; x0 = j < 0 ? last : a[j]; o.push(x0 * (1 - f) + a[j + 1] * f); p += step; }
+      pos = p - n; last = a[n - 1];
+      return Float32Array.from(o);
+    };
+  }
   function rms(a) { var s = 0, i; for (i = 0; i < a.length; i++) s += a[i] * a[i]; return Math.sqrt(s / a.length); }
 
-  function capture(onChunk, onFail, stat) {
-    var ctx, stream, src, proc, stopped = false, rate = 16000, own = false;
+  function capture(onFrame, onFail, stat) {
+    var ctx, stream, src, proc, stopped = false, own = false;
     stat = stat || {};
-    var pre = [], buf = [], speaking = false, silence = 0, dur = 0, floor = 0.004;
-    function flush() {
-      var n = 0, i, a, k = 0;
-      for (i = 0; i < buf.length; i++) n += buf[i].length;
-      a = new Float32Array(n); for (i = 0; i < buf.length; i++) { a.set(buf[i], k); k += buf[i].length; }
-      buf = []; speaking = false; silence = 0; dur = 0;
-      if (n / rate >= 0.45) { stat.chunks = (stat.chunks || 0) + 1; onChunk(resample(a, rate, 16000)); }
-    }
-    function frame(d) {
-      var lv = rms(d), fd = d.length / rate, thr = Math.max(0.01, floor * 2.5);
-      if (lv > (stat.level || 0)) stat.level = lv;
-      if (!speaking) {
-        floor = floor * 0.96 + lv * 0.04;
-        pre.push(d); if (pre.length > 4) pre.shift();
-        if (lv > thr) { speaking = true; buf = pre.slice(); dur = buf.length * fd; silence = 0; pre = []; }
-        return;
-      }
-      buf.push(d); dur += fd;
-      if (lv > thr) silence = 0; else silence += fd;
-      if ((silence >= 0.5 && dur >= 0.6) || dur >= 6.5) flush();
-    }
     navigator.mediaDevices.getUserMedia({ audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true } }).then(function (s) {
       if (stopped) { s.getTracks().forEach(function (t) { t.stop(); }); return; }
       stream = s;
       var AC = G.AudioContext || G.webkitAudioContext;
       /* نستخدم سياق الصوت الذي فُتح عند لمسة المستخدم (ضروري في iPhone وإلا يبقى «معلّقًا» ولا يصل صوت) */
-      ctx = (G.MusammiAC && G.MusammiAC()) || (own = true, new AC()); rate = ctx.sampleRate;
+      ctx = (G.MusammiAC && G.MusammiAC()) || (own = true, new AC());
       if (ctx.state === "suspended") ctx.resume();
       stat.state = ctx.state;
+      var rs = rsStream(ctx.sampleRate, 16000);
       src = ctx.createMediaStreamSource(s);
       proc = ctx.createScriptProcessor(4096, 1, 1);
-      proc.onaudioprocess = function (e) { if (!stopped) frame(new Float32Array(e.inputBuffer.getChannelData(0))); };
+      proc.onaudioprocess = function (e) {
+        if (stopped) return;
+        var d = new Float32Array(e.inputBuffer.getChannelData(0)), lv = rms(d);
+        if (lv > (stat.level || 0)) stat.level = lv;
+        onFrame(rs(d), lv);
+      };
       src.connect(proc); proc.connect(ctx.destination);
     }, function () { onFail("not-allowed"); });
     return { stop: function () {
-      stopped = true; try { if (speaking) flush(); } catch (e) {}
+      stopped = true;
       try { proc && proc.disconnect(); src && src.disconnect(); } catch (e) {}
       try { stream && stream.getTracks().forEach(function (t) { t.stop(); }); } catch (e) {}
       try { if (own && ctx) ctx.close(); } catch (e) {}
     } };
   }
 
+  /* ===== البثّ كلمةً كلمة =====
+     نحلّل الصوت الأخير كل نحو نصف ثانية، فنثبّت الكلمات التي مضى عليها أكثر من ثانية (final)،
+     ونرسل ما بعدها مؤقتًا (interim)، ثم نقتطع الصوت المثبَّت فتبقى النافذة قصيرة وسريعة.
+     عند سكتة تزيد على ٠٫٧ ثانية تُثبَّت كل الكلمات المتبقية. */
+  function makeStreamer(infer, cb, hook) {
+    hook = hook || {};
+    var SR = 16000, LAG = 1.0, PRE = 0.4, SIL = 0.7, STEP = 0.45;
+    var chunks = [], total = 0, ran = 0, speaking = false, silence = 0, pre = [], preLen = 0, floor = 0.004, busy = false, fin = false, alive = true;
+    function cat(list, n) { var a = new Float32Array(n), k = 0, i; for (i = 0; i < list.length; i++) { a.set(list[i], k); k += list[i].length; } return a; }
+    function join(ws) { return ws.map(function (w) { return w.t; }).join(" "); }
+    function reset() { chunks = []; total = 0; ran = 0; speaking = false; silence = 0; fin = false; }
+    function pump() {
+      if (busy || !alive || !speaking) return;
+      if (!fin && total - ran < STEP * SR) return;
+      var a = cat(chunks, total), final = fin, secs = a.length / SR, t0 = Date.now();
+      if (secs < 0.3) { if (final) reset(); return; }
+      if (final) reset();   /* الكلام الذي يصل أثناء التحليل يبدأ نافذة جديدة */
+      busy = true; ran = total;
+      infer(a).then(function (words) {
+        busy = false; if (!alive) return;
+        if (hook.timing) hook.timing(Date.now() - t0, secs);
+        if (final) { var all = join(words); if (all) cb(all, true); return; }
+        var lag = secs > 10 ? 0.3 : (secs > 7 ? 0.6 : LAG), lim = secs - lag, k = 0, done, tail, vis, cut, cur, rest;
+        while (k < words.length && words[k].e <= lim) k++;
+        done = words.slice(0, k); tail = words.slice(k);
+        if (done.length) {
+          cb(join(done), true);
+          cur = cat(chunks, total);
+          cut = Math.floor(((tail.length ? tail[0].s : done[k - 1].e) - 0.3) * SR);
+          cut = Math.max(0, Math.min(cut, a.length, cur.length));
+          rest = cur.subarray(cut); chunks = [rest]; total = rest.length; ran = Math.max(0, a.length - cut);
+        }
+        vis = tail.filter(function (w) { return w.e <= secs - 0.25; });   /* لا نرسل كلمة ما زالت تُنطق */
+        cb(join(vis), false);
+      }, function (e) { busy = false; if (hook.error) hook.error(e); });
+    }
+    return {
+      feed: function (d, lv) {
+        var fd = d.length / SR, thr = Math.max(0.01, floor * 2.5);
+        if (!speaking) {
+          floor = floor * 0.96 + lv * 0.04;
+          pre.push(d); preLen += d.length;
+          while (pre.length > 1 && preLen - pre[0].length >= PRE * SR) preLen -= pre.shift().length;
+          if (lv <= thr) return;
+          speaking = true; chunks = pre; total = preLen; pre = []; preLen = 0; ran = 0; silence = 0; fin = false;
+        } else {
+          chunks.push(d); total += d.length;
+          if (lv > thr) silence = 0; else silence += fd;
+          if (silence >= SIL) fin = true;
+        }
+        pump();
+      },
+      close: function () { alive = false; }
+    };
+  }
+
   /* ===== واجهة المحرك التي يتوقعها musammi.js ===== */
   function engine() {
-    var cap = null, queue = [], busy = false, cbText = null, active = false, stat = { chunks: 0, level: 0 };
-    function pump() {
-      if (busy || !queue.length || !sess || !active) return;
-      busy = true;
-      var a = queue.shift(), t0 = Date.now(), secs = a.length / 16000;
-      run(sess, a).then(function (t) {
-        busy = false;
-        var ms = Date.now() - t0;
-        if (eng.onInfo) { eng.onInfo("text", t || "(لا شيء)"); if (ms > secs * 1500) eng.onInfo("slow", Math.round(ms / 100) / 10); }
-        if (active && t) cbText(t, true);
-        pump();
-      }, function (e) { busy = false; if (eng.onInfo) eng.onInfo("error", msg(e)); pump(); });
-    }
+    var cap = null, st = null, active = false, stat = { chunks: 0, level: 0 }, slowN = 0, slowAt = 0;
     var eng = {
       name: "quran", stat: stat, onInfo: null,
       ready: function (done, progress) {
@@ -228,10 +280,18 @@
         });
       },
       start: function (cb, onEnd) {
-        cbText = cb; active = true; queue = [];
-        cap = capture(function (a) { queue.push(a); if (queue.length > 5) queue.shift(); pump(); }, function (why) { active = false; onEnd(why); }, stat);
+        active = true; slowN = 0;
+        st = makeStreamer(function (a) { stat.chunks++; return runT(sess, a).then(function (r) { if (eng.onInfo && active) eng.onInfo("text", r.text || "(لا شيء)"); return r.words; }); },
+          function (t, f) { if (active) cb(t, f); },
+          { timing: function (ms, secs) {
+              /* أبطأ من الزمن الحقيقي عدة مرات متتالية: ننبّه المستخدم (مرة كل ٣٠ ثانية) */
+              if (ms > secs * 1000 * 1.1) slowN++; else slowN = 0;
+              if (slowN >= 3 && Date.now() - slowAt > 30000 && eng.onInfo) { slowAt = Date.now(); eng.onInfo("slow", Math.round(ms / secs) / 1000); }
+            },
+            error: function (e) { if (eng.onInfo) eng.onInfo("error", msg(e)); } });
+        cap = capture(st.feed, function (why) { active = false; onEnd(why); }, stat);
       },
-      stop: function () { active = false; queue = []; if (cap) cap.stop(); cap = null; }
+      stop: function () { active = false; if (st) st.close(); st = null; if (cap) cap.stop(); cap = null; }
     };
     return eng;
   }
@@ -267,5 +327,5 @@
     }).then(function (c) { return c.keys(); }).then(function (k) { r.model = k.length; }).then(function () { return r; }, function () { return r; });
   }
 
-  G.MusammiQuran = { test: test, check: check, engine: engine, load: load, installed: installed, model: model, _t: { parseVocab: parseVocab, decode: decode } };
+  G.MusammiQuran = { test: test, check: check, engine: engine, load: load, installed: installed, model: model, _t: { parseVocab: parseVocab, decode: decode, decodeTimed: decodeTimed, makeStreamer: makeStreamer, rsStream: rsStream } };
 })(typeof window !== "undefined" ? window : globalThis);
