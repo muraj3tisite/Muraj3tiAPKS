@@ -130,7 +130,7 @@
     if (!html) { e.className = ""; e.innerHTML = ""; return; }
     e.className = "on " + (cls || ""); e.innerHTML = html;
     /* كل الإشعارات تختفي تلقائيًا: القصيرة بعد ٤٫٥ ثوانٍ، وما فيه خيار أو تحميل أطول قليلًا */
-    if (!ms) ms = /<label|جارٍ/.test(html) ? 9000 : 4500;
+    if (!ms) ms = /<label|جارٍ/.test(html) ? 7000 : 3500;
     st.tt = setTimeout(function () { toast(""); }, ms);
   }
   var OLBOX = '<label><input type="checkbox" id="msOnline"> السماح بالتعرّف عبر الإنترنت إن لم تتوفر حزمة محلية (يُرسل الصوت إلى Google)</label>';
@@ -411,7 +411,7 @@
         var go = function (en, isW) {
           if (isW && !lsg("msWhisper")) toast("جارٍ تحميل محرك Whisper لأول مرة…");
           (en.ready || function (c) { c(true); })(function (good, why) {
-            if (!good) { if (!isW && fallback) return fallback_(); return toast((why || "المحرك غير جاهز") + (isW ? "" : "<br>" + OLBOX), ""); }
+            if (!good) { if (!isW && fallback) return fallback_(); if (!isW && !navigator.onLine) return toast("لا يوجد إنترنت، ومحرك Whisper غير محمّل في هذا المتصفح. اتصل بالإنترنت ونزّله من الإعدادات (لكل متصفح تنزيله الخاص).", "", 8000); return toast((why || "المحرك غير جاهز") + (isW ? "" : "<br>" + OLBOX), ""); }
             toast(isW ? "المحرك جاهز. تحدّث، وتظهر الكلمات بعد كل جملة قصيرة." : "", "", 4000);
             st.rec = en; st.on = true; setLive(true);
             resetPage(); lock();

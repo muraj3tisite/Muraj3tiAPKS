@@ -293,7 +293,7 @@ main:has(#t-qurani:not(.hide)){max-width:900px;padding-left:4px;padding-right:4p
 @media(prefers-reduced-motion:reduce){.chb,.ring,.spk{animation:none}}
 .exs{display:flex;gap:12px;align-items:center;margin:12px 0}.exs svg{flex:none}.exs p{margin:2px 0 0}
 .seg button svg{display:block;margin:0 auto}
-.tj-fin{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom,0px) + 10px);width:min(560px,calc(100% - 20px));box-sizing:border-box;z-index:45;display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;background:var(--card);border:2px solid var(--ok);border-radius:14px;padding:8px 12px;margin:0;box-shadow:0 6px 20px rgba(0,0,0,.28)}
+.tj-fin{position:fixed;left:10px;right:10px;margin:0 auto;max-width:560px;box-sizing:border-box;-webkit-transform:translate3d(0,0,0);transform:translate3d(0,0,0);bottom:calc(env(safe-area-inset-bottom,0px) + 10px);z-index:45;display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;background:var(--card);border:2px solid var(--ok);border-radius:14px;padding:8px 12px;box-shadow:0 6px 20px rgba(0,0,0,.28)}
 #t-qurani{padding-bottom:150px}
 /* شريط «أنهيت…»: حجم وموضع ثابتان في كل الحالات، فلا يقفز عند تقليب الصفحات */
 .tj-fin{height:76px;flex-wrap:nowrap;overflow:hidden;gap:8px;padding:6px 10px}
@@ -301,7 +301,7 @@ main:has(#t-qurani:not(.hide)){max-width:900px;padding-left:4px;padding-right:4p
 .tj-fin .fin-ok{flex:1 1 0;min-width:0;display:flex;align-items:center;gap:6px}.tj-fin .fin-ok svg{width:36px;height:36px;flex:none}
 .tj-fin button{flex:none;padding:8px 12px;font-size:13px;white-space:nowrap}.tj-fin .row{display:flex;gap:6px;flex:none}
 .tj-fin>span:first-child{flex:1 1 140px;min-width:0;font-size:14px}.tj-fin>button{flex:none}
-.tj-fin.hide{display:none}.fin-ok{display:flex;align-items:center;gap:8px}
+.tj-fin.hide,.tj-fin.off{display:none}.fin-ok{display:flex;align-items:center;gap:8px}
 
 /* ===== خيارات شكل صفحات المصحف (من الإعدادات) ===== */
 html[data-mp="cream"] :is(.mushaf-sheet,.mp-prev){--pg:#fffdf6;--tj-lazim:#8f0d24;--tj-wajib:#e0282d;--tj-jawaz:#e56a00;--tj-madd2:#a36b00;--tj-ghunna:#1e8a3c;--tj-gray:#8f8f8f;--tj-tafkhim:#1e3a8a;--tj-qalqala:#1f7fd0;--pink:#0b1a33;--pmut:#5a6b85;--mk-fill:#fffdf3;--mk-ink:#14451f;--gold:#b8923a;}
@@ -1321,7 +1321,7 @@ $("t-map").addEventListener("click",function(e){var b=e.target.closest("button")
 function finSection(){var n=tjState.pg,m=tjState.mode,dn=S.log[dkey(new Date())]||{},pr=dn.pr||{},id;
  for(id in pr){if(dn[id]&&n>=pr[id][0]&&n<=pr[id][1]&&(m==="study"||id!=="new"))return {id:id,t:pr[id][2],lo:pr[id][0],hi:pr[id][1]}}
  var c=(TK||[]).filter(function(t){return n>=t.lo&&n<=t.hi})[0];return c?{id:c.id,t:c.t,lo:c.lo,hi:c.hi}:null}
-function finRefresh(){var b=$("tjFin");if(!b||!S)return;var m=tjState.mode,t=finSection();
+function finRefresh(){var b=$("tjFin");if(!b||!S)return;if(b.parentNode!==document.body)document.body.appendChild(b);b.classList.toggle("off",tab!=="qurani");var m=tjState.mode,t=finSection();
  if(!t){var m0=tjState.mode,l0={study:"أنهيت حفظي",review:"أنهيت مراجعتي",tasmee:"أنهيت تسميعي"}[m0]||"أنهيت";b.innerHTML='<span>هذه الصفحة ليست ضمن مهام اليوم</span><button class="p" id="tjFinNone" disabled>'+l0+'</button>';b.classList.remove("hide");return}
  var dn=S.log[dkey(new Date())]||{},ts=m==="tasmee",on=ts?!!(dn.ts&&dn.ts[t.id]):!!dn[t.id],k=S.ch||"boy",
   lab={study:"أنهيت حفظي",review:"أنهيت مراجعتي",tasmee:"أنهيت تسميعي"}[m]||"أنهيت";
@@ -1338,6 +1338,7 @@ $("tjFin").addEventListener("click",function(e){var q=e.target.closest("button")
 var _r0=render;render=function(){_r0();if(tab==="map")renderMap();finRefresh()};
 var _a0=tjApplyView;tjApplyView=function(){var r=_a0.apply(this,arguments);finRefresh();return r};
 var _b0=tjRenderPage;tjRenderPage=function(){var r=_b0.apply(this,arguments);finRefresh();return r};
+document.querySelector("nav").addEventListener("click",function(){setTimeout(finRefresh,0)});
 
 /* ===== الإعدادات + الإنجليزية ===== */
 (function(){
@@ -1718,7 +1719,7 @@ window.MPROF={
 (function(){
 if(!("serviceWorker" in navigator)||location.protocol==="file:")return;
 var had=!!navigator.serviceWorker.controller,rl=false,g=function(i){return document.getElementById(i)};
-function show(w){var b=g("updBar");b.classList.remove("hide");setTimeout(function(){b.classList.add("hide")},8000);g("updGo").onclick=function(){w.postMessage({type:"SKIP_WAITING"})};g("updX").onclick=function(){b.classList.add("hide")}}
+function show(w){var b=g("updBar");b.classList.remove("hide");setTimeout(function(){b.classList.add("hide")},5000);g("updGo").onclick=function(){w.postMessage({type:"SKIP_WAITING"})};g("updX").onclick=function(){b.classList.add("hide")}}
 navigator.serviceWorker.addEventListener("controllerchange",function(){if(!had||rl)return;rl=true;location.reload()});
 navigator.serviceWorker.register("sw.js").then(function(reg){
  if(reg.waiting&&navigator.serviceWorker.controller)show(reg.waiting);
@@ -1798,5 +1799,5 @@ g("setBtn").addEventListener("click",open);g("setBtn2").addEventListener("click"
 </script>
 
 <script src="robot.js?v=3"></script>
-<script src="musammi.js?v=13"></script>
+<script src="musammi.js?v=14"></script>
 </body></html>
