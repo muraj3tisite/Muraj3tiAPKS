@@ -129,7 +129,9 @@
     var e = $("msToast"); if (!e) return; clearTimeout(st.tt);
     if (!html) { e.className = ""; e.innerHTML = ""; return; }
     e.className = "on " + (cls || ""); e.innerHTML = html;
-    if (ms) st.tt = setTimeout(function () { toast(""); }, ms);
+    /* كل الإشعارات تختفي تلقائيًا: القصيرة بعد ٤٫٥ ثوانٍ، وما فيه خيار أو تحميل أطول قليلًا */
+    if (!ms) ms = /<label|جارٍ/.test(html) ? 9000 : 4500;
+    st.tt = setTimeout(function () { toast(""); }, ms);
   }
   var OLBOX = '<label><input type="checkbox" id="msOnline"> السماح بالتعرّف عبر الإنترنت إن لم تتوفر حزمة محلية (يُرسل الصوت إلى Google)</label>';
 
@@ -339,7 +341,7 @@
 
   function done() {
     var m = st.errs, full = st.s0 === 0;
-    toast("✓ " + gN("أتممتَ", "أتممتِ") + " الصفحة" + (m ? " — " + gN("تعثّرتَ", "تعثّرتِ") + " " + (m === 1 ? "مرة واحدة" : m + " مرات") : " بلا أي تعثّر") + ". اضغط «أنهيت…» لتسجيلها.", "ok", 9000);
+    toast("✓ " + gN("أتممتَ", "أتممتِ") + " الصفحة" + (m ? " — " + gN("تعثّرتَ", "تعثّرتِ") + " " + (m === 1 ? "مرة واحدة" : m + " مرات") : " بلا أي تعثّر") + ". اضغط «أنهيت…» لتسجيلها.", "ok", 4500);
     try { if (full && G.S) { G.S.tas = G.S.tas || {}; G.S.tas[G.tjState.pg] = { d: G.dkey(new Date()), ok: m ? 0 : 1 }; G.save(); } } catch (e) {}
     stop(true);
   }
@@ -385,7 +387,7 @@
   function lss(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
   function loadWhisper(cb) {
     if (G.MusammiWhisper) return cb(null);
-    var sc = document.createElement("script"); sc.src = "whisper-engine.js?v=2";
+    var sc = document.createElement("script"); sc.src = "whisper-engine.js?v=3";
     sc.onload = function () { cb(G.MusammiWhisper ? null : 1); }; sc.onerror = function () { cb(1); };
     document.head.appendChild(sc);
   }
@@ -510,7 +512,7 @@
     sec.innerHTML = '<label>التسميع الآلي دون إنترنت</label><p class="sub">نزّل حزمة التعرّف على الصوت العربي مرة واحدة، ثم يعمل التسميع الآلي بلا إنترنت. تُحفظ على جهازك ولا يُرسل صوتك لأي خادم.</p><p class="sub" id="msPackSt" role="status" style="margin:8px 0;font-weight:600"></p><button type="button" id="msPackBtn" class="p" style="width:100%" disabled>تنزيل حزمة التسميع الآلي</button>';
     off.insertAdjacentElement("afterend", sec);
     var ws = document.createElement("div"); ws.className = "stg-sec"; ws.id = "msWSec";
-    ws.innerHTML = '<label>محرك Whisper (يعمل على كل الأجهزة)</label><p class="sub">إن لم يدعم جهازك حزمة المتصفح، نزّل محرك Whisper مرة واحدة (نحو ٨٠ ميجا، يُفضَّل واي فاي)، ثم يعمل التسميع الآلي بلا إنترنت على أي جهاز حديث. تجريبي: يعرض الكلمات بعد كل جملة قصيرة.</p><p class="sub" id="msWSt" role="status" style="margin:8px 0;font-weight:600"></p><button type="button" id="msWBtn" class="p" style="width:100%">تنزيل محرك Whisper</button><label style="display:flex;gap:6px;align-items:center;margin-top:10px;font-size:14px"><input type="checkbox" id="msWAlways"> استخدام Whisper دائمًا</label>';
+    ws.innerHTML = '<label>محرك Whisper (يعمل على كل الأجهزة)</label><p class="sub">إن لم يدعم جهازك حزمة المتصفح، نزّل محرك Whisper مرة واحدة (نحو ٨٠ ميجا، يُفضَّل واي فاي)، ثم يعمل التسميع الآلي بلا إنترنت على أي جهاز حديث. تجريبي: يعرض الكلمات بعد كل جملة قصيرة.</p><p class="sub" id="msWSt" role="status" style="margin:8px 0;font-weight:600"></p><button type="button" id="msWBtn" class="p" style="width:100%">تنزيل محرك Whisper</button><label style="display:flex;gap:6px;align-items:center;margin-top:10px;font-size:14px"><input type="checkbox" id="msWAlways"> استخدام Whisper دائمًا</label><button type="button" id="msWChk" style="width:100%;margin-top:10px">فحص جاهزية العمل دون إنترنت</button><p class="sub" id="msWChkOut" style="margin:8px 0 0;white-space:pre-line"></p>';
     sec.insertAdjacentElement("afterend", ws);
     $("msWAlways").checked = lsg("msEng") === "whisper";
     $("msWAlways").onchange = function () { lss("msEng", this.checked ? "whisper" : "auto"); };
@@ -529,6 +531,16 @@
       doInstall(function (ok, why) { if (!ok) { paintPack(); st.textContent = why; } else { try { localStorage.setItem("msPackAsk", "done"); } catch (e) {} paintPack(); } });
     };
     ["setBtn", "setBtn2"].forEach(function (id) { var e = $(id); if (e) e.addEventListener("click", function () { paintPack(); paintW(); }); });
+    $("msWChk").onclick = function () {
+      var out = $("msWChkOut"); out.textContent = "جارٍ الفحص…";
+      loadWhisper(function (e) {
+        if (e) { out.textContent = "تعذّر تحميل ملف whisper-engine.js"; return; }
+        G.MusammiWhisper.check().then(function (r) {
+          var ok = function (v) { return v ? "✓" : "✗"; };
+          out.textContent = ok(r.sw) + " عامل الخدمة يعمل (يلزم لحفظ الملفات)\n" + ok(r.lib) + " مكتبة المحرك محفوظة\n" + ok(r.libs > 1) + " ملفات التشغيل (wasm) محفوظة: " + arNum(r.libs) + "\n" + ok(r.model >= 3) + " ملفات النموذج محفوظة: " + arNum(r.model) + "\n" + ok(r.flag) + " اكتمل التنزيل في هذا المتصفح" + (r.sw && r.lib && r.libs > 1 && r.model >= 3 && r.flag ? "\n\nجاهز للعمل دون إنترنت." : "\n\nأعد تنزيل المحرك وأنت متصل بالإنترنت، ثم أعد الفحص.");
+        });
+      });
+    };
     paintPack();
   }
   /* سؤال عند فتح التطبيق: نزّل محرك التسميع الآن؟ (مرة واحدة، ويُعاد بعد ٣ أيام إن اختار «لاحقًا»)
@@ -538,6 +550,7 @@
     a.innerHTML = '<b>' + o.title + '</b><p id="msAskP">' + o.text + '</p><div class="row"><button type="button" id="msAskGo" class="p">' + o.yes + '</button><button type="button" id="msAskX">لاحقًا</button></div>';
     document.body.appendChild(a);
     var go = $("msAskGo"), no = $("msAskX"), p = $("msAskP");
+    setTimeout(function () { if (!go.disabled && a.parentNode && !go.hidden) a.remove(); }, 9000);   /* يختفي وحده، ويُسأل ثانية عند فتح قادم */
     no.onclick = function () { a.remove(); if (lsg(o.key) !== "done") lss(o.key, "later:" + Date.now()); };
     go.onclick = function () {
       go.disabled = true; go.textContent = "جارٍ التنزيل…"; p.textContent = "لا تُغلق التطبيق حتى يكتمل التنزيل.";

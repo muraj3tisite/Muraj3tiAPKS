@@ -111,8 +111,9 @@
     return {
       name: "whisper",
       ready: function (done, progress) {
-        load(progress).then(function () { done(true); }, function () {
-          done(false, navigator.onLine ? "تعذّر تحميل محرك Whisper. أعد المحاولة بعد قليل." : "محرك Whisper غير محمّل بعد. اتصل بالإنترنت لتنزيله مرة واحدة.");
+        load(progress).then(function () { done(true); }, function (e) {
+          var d = " [" + String((e && e.message) || e).slice(0, 90) + "]";
+          done(false, (navigator.onLine ? "تعذّر تحميل محرك Whisper. أعد المحاولة بعد قليل." : "محرك Whisper غير محفوظ بالكامل لهذا المتصفح. اتصل بالإنترنت وأعد تنزيله من الإعدادات، ثم اضغط «فحص جاهزية العمل دون إنترنت».") + d);
         });
       },
       start: function (cb, onEnd) {
@@ -123,5 +124,15 @@
     };
   }
 
-  G.MusammiWhisper = { engine: engine, load: load, installed: installed, model: model };
+  /* فحص ما حُفظ للعمل دون إنترنت */
+  function check() {
+    var r = { sw: !!(navigator.serviceWorker && navigator.serviceWorker.controller), lib: false, libs: 0, model: 0, flag: installed() };
+    return caches.match(LIB).then(function (m) { r.lib = !!m; return caches.has("mext-v1"); })
+      .then(function (h) { return h ? caches.open("mext-v1").then(function (c) { return c.keys(); }).then(function (k) { r.libs = k.length; }) : 0; })
+      .then(function () { return caches.keys(); })
+      .then(function (ks) { var k = ks.filter(function (x) { return /transformers/i.test(x); })[0]; return k ? caches.open(k).then(function (c) { return c.keys(); }).then(function (a) { r.model = a.length; }) : 0; })
+      .then(function () { return r; }, function () { return r; });
+  }
+
+  G.MusammiWhisper = { check: check, engine: engine, load: load, installed: installed, model: model };
 })(typeof window !== "undefined" ? window : globalThis);

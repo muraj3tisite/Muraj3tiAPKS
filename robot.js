@@ -120,7 +120,7 @@
     document.body.appendChild(nt);
     mark();
     requestAnimationFrame(function () { requestAnimationFrame(function () { if (nt) nt.classList.add("on"); }); });
-    var me = nt; setTimeout(function () { if (nt === me) hideNote(); }, 7000);
+    var me = nt; setTimeout(function () { if (nt === me) hideNote(); }, 4000);
   }
   /* عند تغيير الجنس (مثلًا من «خريطتي» دون حساب): حدّث البطاقة والزر فورًا */
   function refresh() { greet(); try { document.dispatchEvent(new Event("mrobot")); } catch (e) {} }

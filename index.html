@@ -295,6 +295,11 @@ main:has(#t-qurani:not(.hide)){max-width:900px;padding-left:4px;padding-right:4p
 .seg button svg{display:block;margin:0 auto}
 .tj-fin{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom,0px) + 10px);width:min(560px,calc(100% - 20px));box-sizing:border-box;z-index:45;display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;background:var(--card);border:2px solid var(--ok);border-radius:14px;padding:8px 12px;margin:0;box-shadow:0 6px 20px rgba(0,0,0,.28)}
 #t-qurani{padding-bottom:150px}
+/* شريط «أنهيت…»: حجم وموضع ثابتان في كل الحالات، فلا يقفز عند تقليب الصفحات */
+.tj-fin{height:76px;flex-wrap:nowrap;overflow:hidden;gap:8px;padding:6px 10px}
+.tj-fin>span:first-child,.tj-fin .fin-ok>span{flex:1 1 0;min-width:0;font-size:13px;line-height:1.5;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.tj-fin .fin-ok{flex:1 1 0;min-width:0;display:flex;align-items:center;gap:6px}.tj-fin .fin-ok svg{width:36px;height:36px;flex:none}
+.tj-fin button{flex:none;padding:8px 12px;font-size:13px;white-space:nowrap}.tj-fin .row{display:flex;gap:6px;flex:none}
 .tj-fin>span:first-child{flex:1 1 140px;min-width:0;font-size:14px}.tj-fin>button{flex:none}
 .tj-fin.hide{display:none}.fin-ok{display:flex;align-items:center;gap:8px}
 
@@ -1713,7 +1718,7 @@ window.MPROF={
 (function(){
 if(!("serviceWorker" in navigator)||location.protocol==="file:")return;
 var had=!!navigator.serviceWorker.controller,rl=false,g=function(i){return document.getElementById(i)};
-function show(w){var b=g("updBar");b.classList.remove("hide");g("updGo").onclick=function(){w.postMessage({type:"SKIP_WAITING"})};g("updX").onclick=function(){b.classList.add("hide")}}
+function show(w){var b=g("updBar");b.classList.remove("hide");setTimeout(function(){b.classList.add("hide")},8000);g("updGo").onclick=function(){w.postMessage({type:"SKIP_WAITING"})};g("updX").onclick=function(){b.classList.add("hide")}}
 navigator.serviceWorker.addEventListener("controllerchange",function(){if(!had||rl)return;rl=true;location.reload()});
 navigator.serviceWorker.register("sw.js").then(function(reg){
  if(reg.waiting&&navigator.serviceWorker.controller)show(reg.waiting);
@@ -1784,7 +1789,7 @@ function due(){
 }
 setTimeout(function(){
  if(!navigator.onLine||!due()||!g("updBar").classList.contains("hide"))return;
- refresh().then(function(c){if(c>=N){set("done");return}ask.classList.remove("hide")});
+ refresh().then(function(c){if(c>=N){set("done");return}ask.classList.remove("hide");setTimeout(function(){if(!run&&get()!=="started")hide()},9000)});
 },4000);
 })();
 function open(){refresh()}
@@ -1792,6 +1797,6 @@ g("setBtn").addEventListener("click",open);g("setBtn2").addEventListener("click"
 })();
 </script>
 
-<script src="robot.js?v=2"></script>
-<script src="musammi.js?v=12"></script>
+<script src="robot.js?v=3"></script>
+<script src="musammi.js?v=13"></script>
 </body></html>
