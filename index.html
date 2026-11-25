@@ -293,7 +293,7 @@ main:has(#t-qurani:not(.hide)){max-width:900px;padding-left:4px;padding-right:4p
 @media(prefers-reduced-motion:reduce){.chb,.ring,.spk{animation:none}}
 .exs{display:flex;gap:12px;align-items:center;margin:12px 0}.exs svg{flex:none}.exs p{margin:2px 0 0}
 .seg button svg{display:block;margin:0 auto}
-.tj-fin{position:fixed;left:10px;right:10px;margin:0 auto;max-width:560px;box-sizing:border-box;-webkit-transform:translate3d(0,0,0);transform:translate3d(0,0,0);bottom:calc(env(safe-area-inset-bottom,0px) + 10px);z-index:45;display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;background:var(--card);border:2px solid var(--ok);border-radius:14px;padding:8px 12px;box-shadow:0 6px 20px rgba(0,0,0,.28)}
+.tj-fin{position:fixed;left:10px;right:10px;margin:0 auto;max-width:560px;box-sizing:border-box;-webkit-transform:translate3d(0,0,0);transform:translate3d(0,0,0);bottom:calc(var(--vvb,0px) + env(safe-area-inset-bottom,0px) + 10px);z-index:45;display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;background:var(--card);border:2px solid var(--ok);border-radius:14px;padding:8px 12px;box-shadow:0 6px 20px rgba(0,0,0,.28)}
 #t-qurani{padding-bottom:150px}
 /* شريط «أنهيت…»: حجم وموضع ثابتان في كل الحالات، فلا يقفز عند تقليب الصفحات */
 .tj-fin{height:76px;flex-wrap:nowrap;overflow:hidden;gap:8px;padding:6px 10px}
@@ -1339,6 +1339,12 @@ var _r0=render;render=function(){_r0();if(tab==="map")renderMap();finRefresh()};
 var _a0=tjApplyView;tjApplyView=function(){var r=_a0.apply(this,arguments);finRefresh();return r};
 var _b0=tjRenderPage;tjRenderPage=function(){var r=_b0.apply(this,arguments);finRefresh();return r};
 document.querySelector("nav").addEventListener("click",function(){setTimeout(finRefresh,0)});
+/* تثبيت الشريط والزر العائم على حافة الشاشة المرئية فعلًا: في iPhone يتحرك شريط المتصفح السفلي أثناء التمرير فتبدو العناصر السفلية كأنها تتحرك */
+(function(){var v=window.visualViewport,q=0;
+ function pin(){q=0;var d=0;if(v)d=Math.max(0,window.innerHeight-(v.offsetTop+v.height));document.documentElement.style.setProperty("--vvb",Math.round(d)+"px")}
+ function sched(){if(!q)q=requestAnimationFrame(pin)}
+ if(v){v.addEventListener("resize",sched);v.addEventListener("scroll",sched)}
+ window.addEventListener("scroll",sched,{passive:true});window.addEventListener("orientationchange",sched);pin()})();
 
 /* ===== الإعدادات + الإنجليزية ===== */
 (function(){
@@ -1799,5 +1805,5 @@ g("setBtn").addEventListener("click",open);g("setBtn2").addEventListener("click"
 </script>
 
 <script src="robot.js?v=3"></script>
-<script src="musammi.js?v=14"></script>
+<script src="musammi.js?v=15"></script>
 </body></html>

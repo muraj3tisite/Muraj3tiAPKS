@@ -98,7 +98,7 @@
   function css() {
     var s = document.createElement("style");
     s.textContent =
-      "#msFab{position:fixed;left:12px;bottom:calc(env(safe-area-inset-bottom,0px) + var(--ms-fin,64px) + 24px);z-index:44;display:none;flex-direction:column;align-items:center;gap:0}#msFab.on{display:flex}" +
+      "#msFab{position:fixed;left:12px;bottom:calc(var(--vvb,0px) + env(safe-area-inset-bottom,0px) + var(--ms-fin,64px) + 24px);z-index:44;display:none;flex-direction:column;align-items:center;gap:0}#msFab.on{display:flex}" +
       "#msRobot{filter:drop-shadow(0 3px 5px rgba(0,0,0,.28))}" +
       "#msName{position:relative;margin:-7px 0 4px;font-size:11px;font-weight:800;line-height:18px;padding:0 9px;border-radius:99px;background:var(--card);color:var(--ink);border:1px solid var(--line)}" +
       "#msBtn{width:64px;height:64px;padding:0;border-radius:50%;border:3px solid #d93025;background:var(--card);display:grid;place-items:center;box-shadow:0 6px 18px rgba(0,0,0,.3);-webkit-tap-highlight-color:transparent}" +
@@ -143,6 +143,9 @@
     } catch (e) {}
     return st.ac;
   }
+  G.MusammiAC = function () { return ac(); };
+  var MSV = "1.2.5";   /* رقم إصدار المسمّع: يظهر في الفحص لنتأكد أي نسخة تعمل */
+  var TOL = .75, STOL = .5;   /* حدّ التشابه: أخفض مع Whisper لأن تعرّفه للقرآن أقل دقة */
   function beep() {
     var n = Date.now(); if (n - st.beepT < 600) return; st.beepT = n;
     var r = $("msRobot"); if (r) { r.classList.remove("rb-err"); void r.offsetWidth; r.classList.add("rb-err"); }
@@ -199,8 +202,8 @@
 
   /* ===== المطابقة كلمةً كلمة ===== */
   function toks(s) { var n = norm(s); return n ? n.split(" ") : []; }
-  function wm(a, b) { return !!a && !!b && wsim(a, b) >= .75; }
-  function soft(a, b) { return !!a && !!b && sk(a).length >= 3 && wsim(a, b) >= .5; }
+  function wm(a, b) { return !!a && !!b && wsim(a, b) >= TOL; }
+  function soft(a, b) { return !!a && !!b && sk(a).length >= 3 && wsim(a, b) >= STOL; }
   /* هل تُطابق الكلمة المتوقعة في الموضع p الكلمات المنطوقة من T[j]؟ تُرجع {tok: كلمات منطوقة مستهلكة، adv: كلمات صفحة متقدَّم بها} أو null */
   function tryAt(p, T, j) {
     var w = W[p]; if (!w || j >= T.length) return null;
@@ -387,7 +390,7 @@
   function lss(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
   function loadWhisper(cb) {
     if (G.MusammiWhisper) return cb(null);
-    var sc = document.createElement("script"); sc.src = "whisper-engine.js?v=3";
+    var sc = document.createElement("script"); sc.src = "whisper-engine.js?v=4";
     sc.onload = function () { cb(G.MusammiWhisper ? null : 1); }; sc.onerror = function () { cb(1); };
     document.head.appendChild(sc);
   }
@@ -409,6 +412,11 @@
       pickEngine(function (en, err, isW, fallback) {
         if (!en) return toast(err, "");
         var go = function (en, isW) {
+          TOL = isW ? .6 : .75; STOL = isW ? .4 : .5;
+          if (isW) en.onInfo = function (k, m) {
+            if (k === "error") toast("خطأ في المحرك: " + m, "", 6000);
+            else if (k === "text" && lsg("msDbg") === "1") toast("سمعتُ: " + m, "", 4000);
+          };
           if (isW && !lsg("msWhisper")) toast("جارٍ تحميل محرك Whisper لأول مرة…");
           (en.ready || function (c) { c(true); })(function (good, why) {
             if (!good) { if (!isW && fallback) return fallback_(); if (!isW && !navigator.onLine) return toast("لا يوجد إنترنت، ومحرك Whisper غير محمّل في هذا المتصفح. اتصل بالإنترنت ونزّله من الإعدادات (لكل متصفح تنزيله الخاص).", "", 8000); return toast((why || "المحرك غير جاهز") + (isW ? "" : "<br>" + OLBOX), ""); }
@@ -512,7 +520,7 @@
     sec.innerHTML = '<label>التسميع الآلي دون إنترنت</label><p class="sub">نزّل حزمة التعرّف على الصوت العربي مرة واحدة، ثم يعمل التسميع الآلي بلا إنترنت. تُحفظ على جهازك ولا يُرسل صوتك لأي خادم.</p><p class="sub" id="msPackSt" role="status" style="margin:8px 0;font-weight:600"></p><button type="button" id="msPackBtn" class="p" style="width:100%" disabled>تنزيل حزمة التسميع الآلي</button>';
     off.insertAdjacentElement("afterend", sec);
     var ws = document.createElement("div"); ws.className = "stg-sec"; ws.id = "msWSec";
-    ws.innerHTML = '<label>محرك Whisper (يعمل على كل الأجهزة)</label><p class="sub">إن لم يدعم جهازك حزمة المتصفح، نزّل محرك Whisper مرة واحدة (نحو ٨٠ ميجا، يُفضَّل واي فاي)، ثم يعمل التسميع الآلي بلا إنترنت على أي جهاز حديث. تجريبي: يعرض الكلمات بعد كل جملة قصيرة.</p><p class="sub" id="msWSt" role="status" style="margin:8px 0;font-weight:600"></p><button type="button" id="msWBtn" class="p" style="width:100%">تنزيل محرك Whisper</button><label style="display:flex;gap:6px;align-items:center;margin-top:10px;font-size:14px"><input type="checkbox" id="msWAlways"> استخدام Whisper دائمًا</label><button type="button" id="msWChk" style="width:100%;margin-top:10px">فحص جاهزية العمل دون إنترنت</button><p class="sub" id="msWChkOut" style="margin:8px 0 0;white-space:pre-line"></p>';
+    ws.innerHTML = '<label>محرك Whisper (يعمل على كل الأجهزة)</label><p class="sub">إن لم يدعم جهازك حزمة المتصفح، نزّل محرك Whisper مرة واحدة (نحو ٨٠ ميجا، يُفضَّل واي فاي)، ثم يعمل التسميع الآلي بلا إنترنت على أي جهاز حديث. تجريبي: يعرض الكلمات بعد كل جملة قصيرة.</p><p class="sub" id="msWSt" role="status" style="margin:8px 0;font-weight:600"></p><button type="button" id="msWBtn" class="p" style="width:100%">تنزيل محرك Whisper</button><label style="display:flex;gap:6px;align-items:center;margin-top:10px;font-size:14px"><input type="checkbox" id="msWAlways"> استخدام Whisper دائمًا</label><label style="display:flex;gap:6px;align-items:center;margin-top:10px;font-size:14px"><input type="checkbox" id="msDbg"> وضع التشخيص: إظهار ما يسمعه المحرك</label><button type="button" id="msWTest" style="width:100%;margin-top:10px">اختبار الميكروفون والمحرك (٥ ثوانٍ)</button><p class="sub" id="msWTestOut" style="margin:8px 0 0;white-space:pre-line"></p><button type="button" id="msWChk" style="width:100%;margin-top:10px">فحص جاهزية العمل دون إنترنت</button><p class="sub" id="msWChkOut" style="margin:8px 0 0;white-space:pre-line"></p>';
     sec.insertAdjacentElement("afterend", ws);
     $("msWAlways").checked = lsg("msEng") === "whisper";
     $("msWAlways").onchange = function () { lss("msEng", this.checked ? "whisper" : "auto"); };
@@ -531,13 +539,25 @@
       doInstall(function (ok, why) { if (!ok) { paintPack(); st.textContent = why; } else { try { localStorage.setItem("msPackAsk", "done"); } catch (e) {} paintPack(); } });
     };
     ["setBtn", "setBtn2"].forEach(function (id) { var e = $(id); if (e) e.addEventListener("click", function () { paintPack(); paintW(); }); });
+    $("msDbg").checked = lsg("msDbg") === "1";
+    $("msDbg").onchange = function () { lss("msDbg", this.checked ? "1" : "0"); };
+    $("msWTest").onclick = function () {
+      var out = $("msWTestOut"), b = this; ac(); b.disabled = true; out.textContent = "جارٍ التسجيل ٥ ثوانٍ… قل: بسم الله الرحمن الرحيم";
+      loadWhisper(function (e) {
+        if (e) { b.disabled = false; out.textContent = "تعذّر تحميل ملف whisper-engine.js"; return; }
+        G.MusammiWhisper.test(5, function (r) {
+          b.disabled = false;
+          out.textContent = "إصدار المسمّع: " + MSV + "\nحالة الصوت: " + (r.state || "؟") + "\nأعلى مستوى للصوت: " + r.level.toFixed(3) + "\n" + (r.err ? "✗ " + r.err : "زمن التحليل: " + (r.ms / 1000).toFixed(1) + " ث\nما فهمه المحرك: «" + (r.text || "لا شيء") + "»");
+        });
+      });
+    };
     $("msWChk").onclick = function () {
       var out = $("msWChkOut"); out.textContent = "جارٍ الفحص…";
       loadWhisper(function (e) {
         if (e) { out.textContent = "تعذّر تحميل ملف whisper-engine.js"; return; }
         G.MusammiWhisper.check().then(function (r) {
           var ok = function (v) { return v ? "✓" : "✗"; };
-          out.textContent = ok(r.sw) + " عامل الخدمة يعمل (يلزم لحفظ الملفات)\n" + ok(r.lib) + " مكتبة المحرك محفوظة\n" + ok(r.libs > 1) + " ملفات التشغيل (wasm) محفوظة: " + arNum(r.libs) + "\n" + ok(r.model >= 3) + " ملفات النموذج محفوظة: " + arNum(r.model) + "\n" + ok(r.flag) + " اكتمل التنزيل في هذا المتصفح" + (r.sw && r.lib && r.libs > 1 && r.model >= 3 && r.flag ? "\n\nجاهز للعمل دون إنترنت." : "\n\nأعد تنزيل المحرك وأنت متصل بالإنترنت، ثم أعد الفحص.");
+          out.textContent = "إصدار المسمّع: " + MSV + "\n" + ok(r.sw) + " عامل الخدمة يعمل (يلزم لحفظ الملفات)\n" + ok(r.lib) + " مكتبة المحرك محفوظة\n" + ok(r.libs > 1) + " ملفات التشغيل (wasm) محفوظة: " + arNum(r.libs) + "\n" + ok(r.model >= 3) + " ملفات النموذج محفوظة: " + arNum(r.model) + "\n" + ok(r.flag) + " اكتمل التنزيل في هذا المتصفح" + (r.sw && r.lib && r.libs > 1 && r.model >= 3 && r.flag ? "\n\nجاهز للعمل دون إنترنت." : "\n\nأعد تنزيل المحرك وأنت متصل بالإنترنت، ثم أعد الفحص.");
         });
       });
     };
