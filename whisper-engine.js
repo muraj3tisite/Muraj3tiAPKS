@@ -7,6 +7,17 @@
   var DEF_MODEL = "onnx-community/whisper-base";   /* بديل أسرع وأخف: onnx-community/whisper-tiny */
   var FLAG = "msWhisper";
   var pipe = null, loading = null;
+  /* نحفظ ملفات المكتبة (و wasm) صراحةً في مخزن دائم، حتى لو لم يكن عامل الخدمة قد اعترضها وقت التنزيل */
+  function persistLibs() {
+    try {
+      if (navigator.storage && navigator.storage.persist) navigator.storage.persist();
+      var urls = performance.getEntriesByType("resource").map(function (e) { return e.name; }).filter(function (u) { return u.indexOf("https://cdn.jsdelivr.net/") === 0; });
+      urls.push(LIB);
+      caches.open("mext-v1").then(function (c) {
+        urls.forEach(function (u) { c.match(u).then(function (m) { if (!m) fetch(u, { mode: "cors" }).then(function (r) { if (r.ok) c.put(u, r); }).catch(function () {}); }); });
+      });
+    } catch (e) {}
+  }
 
   function ls(k, v) { try { if (v === undefined) return localStorage.getItem(k); localStorage.setItem(k, v); } catch (e) {} return null; }
   function model() { return ls("msWModel") || DEF_MODEL; }
@@ -27,7 +38,7 @@
     loading = import(LIB).then(function (T) {
       if (T.env) { T.env.allowLocalModels = false; }
       return T.pipeline("automatic-speech-recognition", model(), { dtype: "q8", device: "wasm", progress_callback: cb });
-    }).then(function (p) { pipe = p; loading = null; ls(FLAG, model()); if (onProgress) onProgress(100); return p; },
+    }).then(function (p) { pipe = p; loading = null; ls(FLAG, model()); persistLibs(); if (onProgress) onProgress(100); return p; },
       function (e) { loading = null; throw e; });
     return loading;
   }

@@ -385,7 +385,7 @@
   function lss(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
   function loadWhisper(cb) {
     if (G.MusammiWhisper) return cb(null);
-    var sc = document.createElement("script"); sc.src = "whisper-engine.js?v=1";
+    var sc = document.createElement("script"); sc.src = "whisper-engine.js?v=2";
     sc.onload = function () { cb(G.MusammiWhisper ? null : 1); }; sc.onerror = function () { cb(1); };
     document.head.appendChild(sc);
   }
@@ -395,7 +395,7 @@
     if (G.MusammiEngine) return cb(G.MusammiEngine);
     var wOn = !!lsg("msWhisper"), pref = lsg("msEng") || "auto";
     var useW = function () { loadWhisper(function (err) { if (err) return cb(null, "تعذّر تحميل ملف محرك Whisper. اتصل بالإنترنت وأعد المحاولة."); cb(G.MusammiWhisper.engine(), null, true); }); };
-    if (pref === "whisper") return useW();
+    if (pref === "whisper" || (wOn && !navigator.onLine)) return useW();   /* دون إنترنت: Whisper أولًا */
     var en = engine();
     if (!en) return wOn ? useW() : cb(null, WNO + OLBOX);
     cb(en, null, false, wOn ? useW : null);
@@ -418,6 +418,14 @@
               en.start(onSpeech, function (e2) {
                 if (!st.on) return;
                 if (e2 === "not-allowed" || e2 === "service-not-allowed") { toast("اسمح للموقع باستخدام الميكروفون.", "", 7000); return stop(true); }
+                if ((e2 === "network" || e2 === "language-not-supported") && !isW && lsg("msWhisper")) {   /* انقطع الإنترنت أثناء التعرّف: ننتقل إلى Whisper المحمّل */
+                  try { en.stop(); } catch (x) {}
+                  return loadWhisper(function (er) {
+                    if (er) { toast("تعذّر تحميل محرك Whisper.", "", 5000); return stop(true); }
+                    en = G.MusammiWhisper.engine(); isW = true; toast("تم التحويل إلى محرك Whisper (دون إنترنت)…");
+                    en.ready(function (good, why) { if (!good) { toast(why || "محرك Whisper غير جاهز", "", 6000); return stop(true); } st.rec = en; run(); });
+                  });
+                }
                 if (e2 === "network" || e2 === "language-not-supported") { toast("لا يعمل التعرّف الآن دون إنترنت. نزّل حزمة التسميع الآلي أو محرك Whisper من إعدادات التطبيق (مرة واحدة)، أو اتصل بالإنترنت وفعّل «السماح بالإنترنت».<br>" + OLBOX, ""); return stop(true); }
                 setTimeout(run, 250);
               });
@@ -550,8 +558,8 @@
       if (lsg("msWhisper")) return;                       /* محرك Whisper محمّل: لا حاجة لسؤال */
       packStatus(function (x) {
         if (x === "available") return lss("msPackAsk", "done");
-        if (x === "downloadable" && due("msPackAsk")) return askDialog({ key: "msPackAsk", title: "التسميع الآلي دون إنترنت", text: "هل تريد تنزيل حزمة الصوت العربي الآن؟ مرة واحدة فقط، ثم يعمل التسميع الآلي بلا إنترنت. الحجم صغير نسبيًا، ويُفضَّل استخدام واي فاي.", yes: "نعم، نزّل الحزمة", install: function (prog, done) { doInstall(done); } });
-        if ((x === "unsupported" || x === "unavailable") && due("msWAsk")) return askDialog({ key: "msWAsk", title: "التسميع الآلي دون إنترنت", text: "متصفحك لا يوفّر حزمة تعرّف مدمجة. هل تريد تنزيل محرك Whisper (نحو ٨٠ ميجا، مرة واحدة) ليعمل التسميع الآلي على جهازك بلا إنترنت؟ يُفضَّل واي فاي.", yes: "نعم، نزّل المحرك",
+        /* Whisper أولًا: يعمل على كل المتصفحات والأجهزة، أما حزمة المتصفح فتتوفر على بعضها فقط (وتبقى في الإعدادات) */
+        if (due("msWAsk")) return askDialog({ key: "msWAsk", title: "التسميع الآلي دون إنترنت", text: "لتعمل المراجعة بالتسميع الآلي دون إنترنت على أي جهاز ومتصفح، نزّل محرك Whisper الآن (نحو ٨٠ ميجا، مرة واحدة). يُفضَّل استخدام واي فاي.", yes: "نعم، نزّل المحرك",
           install: function (prog, done) { loadWhisper(function (e) { if (e) return done(false, "تعذّر تحميل ملف المحرك. أعد المحاولة."); G.MusammiWhisper.load(function (pct) { prog(arNum(pct) + "٪"); }).then(function () { done(true); }, function () { done(false, "تعذّر التنزيل. تأكد من الإنترنت ومن توفر مساحة ثم أعد المحاولة."); }); }); } });
       });
     })();
