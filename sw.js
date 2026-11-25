@@ -1,24 +1,23 @@
 /* غيّر رقم الإصدار عند كل تحديث تنشره: أي تغيير في هذا الملف يُظهر للمستخدمين رسالة «يتوفر تحديث» */
-var VERSION = "1.3.3";
+var VERSION = "1.4.0";
 var CACHE = "murajaati-" + VERSION;
 /* خطوط صفحات المصحف تُحفظ في مخزن دائم لا يُمسح عند تغيير الإصدار، حتى لا تُنزَّل (نحو ١٠٠ ميجا) من جديد */
 var FONTS = "mfonts-v1";
-/* مكتبة تشغيل النموذج (jsdelivr) تُحفظ في مخزن دائم أيضًا، فلا تُمسح عند تحديث التطبيق. النموذج نفسه يحفظه quran-engine.js في مخزن خاص (mquran-v1) */
-var LIBS = "mext-v1";
-function store(url) { return /\/fonts\/p\d+\.woff$/.test(url) ? FONTS : (url.indexOf("https://cdn.jsdelivr.net/") === 0 ? LIBS : CACHE); }
+function store(url) { return /\/fonts\/p\d+\.woff$/.test(url) ? FONTS : CACHE; }
 /* مواقع خارجية يحتاجها التطبيق ونخزّنها ليعمل دون إنترنت بعد أول فتح */
-var EXT = ["cdn.jsdelivr.net", "fonts.googleapis.com", "fonts.gstatic.com", "cdnjs.cloudflare.com", "www.gstatic.com"];
+var EXT = ["fonts.googleapis.com", "fonts.gstatic.com", "cdnjs.cloudflare.com", "www.gstatic.com"];
 
 self.addEventListener("install", function (e) {
   e.waitUntil(caches.open(CACHE).then(function (c) {
-    return Promise.all(["./", "manifest.json", "robot.js?v=3", "musammi.js?v=19", "quran-engine.js?v=3", "data/quran-text.json"].map(function (u) { return c.add(u).catch(function () {}); }));
+    return Promise.all(["./", "manifest.json", "robot.js?v=3", "musammi.js?v=20", "data/quran-text.json"].map(function (u) { return c.add(u).catch(function () {}); }));
   }));
 });
 
 self.addEventListener("activate", function (e) {
   e.waitUntil(
     caches.keys().then(function (ks) {
-      return Promise.all(ks.filter(function (k) { return k.indexOf("murajaati-") === 0 && k !== CACHE; }).map(function (k) { return caches.delete(k); }));
+      /* يُحذف أيضًا ما خلّفه محرك التلاوة القديم (النموذج ومكتبة التشغيل) لتحرير المساحة */
+      return Promise.all(ks.filter(function (k) { return (k.indexOf("murajaati-") === 0 && k !== CACHE) || k === "mquran-v1" || k === "mext-v1"; }).map(function (k) { return caches.delete(k); }));
     }).then(function () { return self.clients.claim(); })
   );
 });

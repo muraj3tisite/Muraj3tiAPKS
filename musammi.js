@@ -1,5 +1,5 @@
-/* المسمّع الآلي — مطابقة صارمة للتلاوة، يعمل دون إنترنت.
-   النص: data/quran-text.json  |  المحرك: تعرّف صوتي على الجهاز فقط (لا يُرسل الصوت لأي خادم). */
+/* المسمّع الآلي — مطابقة صارمة للتلاوة، ويعمل عبر الإنترنت فقط (تعرّف المتصفح الصوتي).
+   النص: data/quran-text.json */
 (function (G) {
   "use strict";
   /* ===== 1) التطبيع والمطابقة (لا يعتمد على المتصفح) ===== */
@@ -90,7 +90,6 @@
 
   /* ===== 2) الواجهة والمحرك: تسميع كلمةً كلمة، من أي موضع في الصفحة ===== */
   var $ = function (i) { return document.getElementById(i); };
-  function allowOnline() { try { return localStorage.getItem("msOnline") === "1"; } catch (e) { return false; } }
   var Q = null, W = [];
   var st = { max: 0, rr: false, erred: false, on: false, rec: null, pos: -1, fin: [], itx: [], j: 0, tm: null, tt: null, errs: 0, s0: -1, beepT: 0, ac: null, g: "" };
   function gN(m, f) { var w = G.MRobot && G.MRobot.who(); return w && w.g === "f" ? f : m; }
@@ -105,10 +104,8 @@
       "#msBtn::after{content:'';width:28px;height:28px;border-radius:50%;background:#d93025;transition:width .18s,height .18s,border-radius .18s}" +
       "#msBtn.live{animation:msRing 1.3s ease-out infinite}#msBtn.live::after{width:24px;height:24px;border-radius:6px}" +
       "@keyframes msRing{0%{box-shadow:0 0 0 0 rgba(217,48,37,.55),0 6px 18px rgba(0,0,0,.3)}100%{box-shadow:0 0 0 18px rgba(217,48,37,0),0 6px 18px rgba(0,0,0,.3)}}" +
-      "#msAsk{position:fixed;left:12px;right:12px;bottom:calc(env(safe-area-inset-bottom,0px) + 12px);z-index:88;background:var(--card);color:var(--ink);border:1px solid var(--acc);border-radius:14px;padding:12px 14px;box-shadow:0 10px 30px rgba(0,0,0,.25);max-width:520px;margin:0 auto}#msAsk b{display:block;margin-bottom:2px}#msAsk p{margin:0 0 10px;color:var(--mut);font-size:14px}#msAsk .row{display:flex;gap:8px;flex-wrap:wrap}#msAsk .row button{flex:1;min-width:110px}" +
       "#msToast{position:fixed;top:calc(env(safe-area-inset-top,0px) + 10px);left:50%;transform:translateX(-50%);width:min(520px,calc(100% - 24px));z-index:46;display:none;background:var(--card);color:var(--ink);border:2px solid var(--warn);border-radius:14px;padding:10px 14px;font-size:14px;line-height:1.7;box-shadow:0 8px 24px rgba(0,0,0,.3)}" +
       "#msToast.on{display:block}#msToast.ok{border-color:var(--ok);font-weight:800}" +
-      "#msToast label{display:flex;gap:6px;align-items:center;font-size:13px;font-weight:400;margin:6px 0 0}" +
       /* الكشف كلمةً كلمة: الآية مخفية كلها، وتُظهَر الكلمات المقروءة صحيحًا فقط */
       ".tj-hideaya .aya-t:not(.rev) .qw.wrev{visibility:visible!important}" +
       ".tj-hideaya .aya-t .qw.wrev,.tj-hideaya .aya-t .qw.wrev *{color:var(--ms-ink,#0b1a33)!important}" +
@@ -133,7 +130,6 @@
     if (!ms) ms = /<label|جارٍ/.test(html) ? 7000 : 3500;
     st.tt = setTimeout(function () { toast(""); }, ms);
   }
-  var OLBOX = '<label><input type="checkbox" id="msOnline"> السماح بالتعرّف عبر الإنترنت إن لم تتوفر حزمة محلية (يُرسل الصوت إلى Google)</label>';
 
   /* ===== الصوت: صافرة قصيرة عند الخطأ فقط ===== */
   function ac() {
@@ -144,8 +140,7 @@
     return st.ac;
   }
   G.MusammiAC = function () { return ac(); };
-  var MSV = "1.3.3";   /* رقم إصدار المسمّع: يظهر في الفحص لنتأكد أي نسخة تعمل */
-  var TOL = .75, STOL = .5;   /* حدّ التشابه: أخفض قليلًا مع محرك التلاوة لأن نطقه يُكتب بإملاء المصحف العثماني */
+  var TOL = .75, STOL = .5;   /* حدّ التشابه */
   function beep() {
     var n = Date.now(); if (n - st.beepT < 600) return; st.beepT = n;
     var r = $("msRobot"); if (r) { r.classList.remove("rb-err"); void r.offsetWidth; r.classList.add("rb-err"); }
@@ -349,12 +344,13 @@
     stop(true);
   }
 
-  /* المحرك: محلي مخصص (window.MusammiEngine) ثم تعرّف الجهاز. الإنترنت لا يُستخدم إلا بإذن صريح */
+  /* المحرك: تعرّف المتصفح الصوتي عبر الإنترنت فقط */
+  var NOSR = "هذا المتصفح لا يدعم التعرّف الصوتي. استخدم Chrome أو Edge أو Safari.";
+  var NONET = "التسميع الآلي يحتاج إلى اتصال بالإنترنت. اتصل بالإنترنت ثم أعد المحاولة.";
   function engine() {
-    if (G.MusammiEngine) return G.MusammiEngine;
     var SR = G.SpeechRecognition || G.webkitSpeechRecognition; if (!SR) return null;
     var r = new SR(); r.lang = "ar-SA"; r.continuous = true; r.interimResults = true; r.maxAlternatives = 3;
-    if ("processLocally" in r) r.processLocally = true; else if (!allowOnline()) return null;
+    try { if ("processLocally" in r) r.processLocally = false; } catch (e) {}
     return { start: function (cb, onEnd) {
       r.onresult = function (e) { for (var i = e.resultIndex; i < e.results.length; i++) {
         var res = e.results[i];
@@ -362,17 +358,7 @@
       } };
       r.onerror = function (e) { onEnd(e.error); }; r.onend = function () { onEnd(); };
       r.start();
-    }, stop: function () { try { r.abort(); } catch (e) {} },
-    ready: function (cb) {
-      if (!G.SpeechRecognition || !G.SpeechRecognition.available) return cb(true);
-      var fb = function (why) { if (allowOnline()) { r.processLocally = false; return cb(true); } cb(false, why); };
-      G.SpeechRecognition.available({ langs: ["ar-SA"], processLocally: true }).then(function (s) {
-        if (s === "available") return cb(true);
-        if (s === "unavailable") return fb("حزمة العربية للتعرّف الصوتي غير متاحة على هذا الجهاز. نزّل محرك التلاوة من إعدادات التطبيق، أو فعّل «السماح بالإنترنت».");
-        toast("جارٍ تنزيل حزمة التعرّف على العربية (مرة واحدة)…");
-        G.SpeechRecognition.install({ langs: ["ar-SA"], processLocally: true }).then(function (ok) { ok ? cb(true) : fb("تعذّر تنزيل الحزمة"); }, function () { fb("تعذّر تنزيل الحزمة"); });
-      }, function () { cb(true); });
-    } };
+    }, stop: function () { try { r.abort(); } catch (e) {} } };
   }
 
   function resetPage() {
@@ -385,75 +371,25 @@
     if (b) { b.classList.toggle("live", on); b.setAttribute("aria-pressed", on ? "true" : "false"); b.setAttribute("aria-label", on ? "إيقاف التسميع الآلي" : "بدء التسميع الآلي"); }
     if (r) r.classList.toggle("rb-live", on);
   }
-  function arNum(n) { return String(n).replace(/\d/g, function (d) { return "٠١٢٣٤٥٦٧٨٩"[d]; }); }
-  function lsg(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
-  function lss(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
-  /* سبب فشل التنزيل بكلمات مفهومة، بدل رسالة عامة */
-  function whyFail(e) {
-    var m = String((e && e.message) || e || "");
-    if (/Failed to fetch|NetworkError|Load failed/i.test(m)) return "تعذّر الوصول إلى رابط النموذج. تأكد أن مستودع النموذج عام (Public) وأن الرابط صحيح.";
-    if (/Quota|storage|space/i.test(m)) return "لا تتسع ذاكرة المتصفح للنموذج. حرّر مساحة ثم أعد المحاولة.";
-    return m.slice(0, 160) || "سبب غير معروف";
-  }
-  function loadQuran(cb) {
-    if (G.MusammiQuran) return cb(null);
-    var sc = document.createElement("script"); sc.src = "quran-engine.js?v=3";
-    sc.onload = function () { cb(G.MusammiQuran ? null : 1); }; sc.onerror = function () { cb(1); };
-    document.head.appendChild(sc);
-  }
-  var WNO = "هذا المتصفح لا يوفّر تعرّفًا صوتيًا مدمجًا. نزّل محرك التلاوة من إعدادات التطبيق (مرة واحدة)، أو فعّل التعرّف عبر الإنترنت.<br>";
-  /* اختيار المحرك: محرك مخصص ← التلاوة إن فُضّل ← تعرّف المتصفح ← التلاوة المحمّل كبديل */
-  function pickEngine(cb) {
-    if (G.MusammiEngine) return cb(G.MusammiEngine);
-    var wOn = !!lsg("msQuran"), pref = lsg("msEng") || "auto";
-    var useW = function () { loadQuran(function (err) { if (err) return cb(null, "تعذّر تحميل ملف محرك التلاوة. اتصل بالإنترنت وأعد المحاولة."); cb(G.MusammiQuran.engine(), null, true); }); };
-    if (pref === "quran" || (wOn && !navigator.onLine)) return useW();   /* دون إنترنت: التلاوة أولًا */
-    var en = engine();
-    if (!en) return wOn ? useW() : cb(null, WNO + OLBOX);
-    cb(en, null, false, wOn ? useW : null);
-  }
   function start() {
     ac();
+    if (!navigator.onLine) return toast(NONET, "", 6000);
     loadText(function (ok) {
       if (!ok) return toast("ملف النص غير موجود: ضع data/quran-text.json.", "", 6000);
-      pickEngine(function (en, err, isW, fallback) {
-        if (!en) return toast(err, "");
-        var go = function (en, isW) {
-          TOL = isW ? .7 : .75; STOL = isW ? .45 : .5; st.tmo = isW ? 2600 : 1000;
-          if (isW) en.onInfo = function (k, m) {
-            if (k === "error") toast("خطأ في المحرك: " + m, "", 6000);
-            else if (k === "slow") toast("المحرك أبطأ من سرعة قراءتك على هذا الجهاز، فقد تتأخر الكلمات قليلًا. اقرأ بهدوء.", "", 5000);
-          };
-          if (isW && !lsg("msQuran")) toast("جارٍ تحميل محرك التلاوة لأول مرة…");
-          (en.ready || function (c) { c(true); })(function (good, why) {
-            if (!good) { if (!isW && fallback) return fallback_(); if (!isW && !navigator.onLine) return toast("لا يوجد إنترنت، ومحرك التلاوة غير محمّل في هذا المتصفح. اتصل بالإنترنت ونزّله من الإعدادات (لكل متصفح تنزيله الخاص).", "", 8000); return toast((why || "المحرك غير جاهز") + (isW ? "" : "<br>" + OLBOX), ""); }
-            toast(isW ? "المحرك جاهز. تحدّث، وتظهر الكلمات كلمةً كلمة." : "", "", 4000);
-            st.rec = en; st.on = true; setLive(true);
-            resetPage(); lock();
-            var run = function () {
-              if (st.itx.length) { st.itx = []; if (st.j > st.fin.length) st.j = st.fin.length; }
-              en.start(onSpeech, function (e2) {
-                if (!st.on) return;
-                if (e2 === "not-allowed" || e2 === "service-not-allowed") { toast("اسمح للموقع باستخدام الميكروفون.", "", 7000); return stop(true); }
-                if ((e2 === "network" || e2 === "language-not-supported") && !isW && lsg("msQuran")) {   /* انقطع الإنترنت أثناء التعرّف: ننتقل إلى التلاوة المحمّل */
-                  try { en.stop(); } catch (x) {}
-                  return loadQuran(function (er) {
-                    if (er) { toast("تعذّر تحميل محرك التلاوة.", "", 5000); return stop(true); }
-                    en = G.MusammiQuran.engine(); isW = true; toast("تم التحويل إلى محرك التلاوة (دون إنترنت)…");
-                    en.ready(function (good, why) { if (!good) { toast(why || "محرك التلاوة غير جاهز", "", 6000); return stop(true); } st.rec = en; run(); });
-                  });
-                }
-                if (e2 === "network" || e2 === "language-not-supported") { toast("لا يعمل التعرّف الآن دون إنترنت. نزّل محرك التلاوة من إعدادات التطبيق (مرة واحدة)، أو اتصل بالإنترنت وفعّل «السماح بالإنترنت».<br>" + OLBOX, ""); return stop(true); }
-                setTimeout(run, 250);
-              });
-            };
-            run();
-          }, function (pct) { toast("جارٍ تحميل محرك التلاوة… " + arNum(pct) + "٪"); });
-        };
-        var fallback_ = function () { fallback(); };
-        if (!isW && fallback) { fallback_ = function () { loadQuran(function (e3) { if (e3) return toast("تعذّر تحميل محرك التلاوة.", "", 5000); go(G.MusammiQuran.engine(), true); }); }; }
-        go(en, isW);
-      });
+      var en = engine(); if (!en) return toast(NOSR, "", 6000);
+      toast("");
+      st.tmo = 1000; st.rec = en; st.on = true; setLive(true);
+      resetPage(); lock();
+      var run = function () {
+        if (st.itx.length) { st.itx = []; if (st.j > st.fin.length) st.j = st.fin.length; }
+        en.start(onSpeech, function (e2) {
+          if (!st.on) return;
+          if (e2 === "not-allowed" || e2 === "service-not-allowed") { toast("اسمح للموقع باستخدام الميكروفون.", "", 7000); return stop(true); }
+          if (e2 === "network" || e2 === "language-not-supported") { toast(NONET, "", 6000); return stop(true); }
+          setTimeout(run, 250);
+        });
+      };
+      run();
     });
   }
   function stop(keep) {
@@ -468,16 +404,18 @@
     f.innerHTML = '<div id="msRobot"></div><div id="msName"></div><button id="msBtn" type="button" aria-pressed="false" aria-label="بدء التسميع الآلي"></button>';
     document.body.appendChild(f);
     var t = document.createElement("div"); t.id = "msToast"; t.setAttribute("role", "status"); t.setAttribute("aria-live", "polite"); document.body.appendChild(t);
-    t.addEventListener("click", function (e) { if (!e.target.closest("label")) toast(""); });
-    t.addEventListener("change", function (e) { if (e.target.id === "msOnline") { try { localStorage.setItem("msOnline", e.target.checked ? "1" : "0"); } catch (x) {} } });
+    t.addEventListener("click", function () { toast(""); });
     $("msBtn").onclick = function () { if (st.on) { stop(); revealAll(); } else start(); };   /* عند ضغط الإيقاف تظهر الآيات كلها */
   }
+  /* اسم الروبوت: يضعه المستخدم، والافتراضي «المسمّع الآلي» */
+  var DEF_NAME = "المسمّع الآلي";
+  function rname() { try { var p = G.MPROFILE && G.MPROFILE(); var n = p && p.rn; return (n && String(n).replace(/\s+/g, " ").trim()) || DEF_NAME; } catch (e) { return DEF_NAME; } }
   function paintRobot() {
     var w = G.MRobot ? G.MRobot.who() : { g: "m" };
     if (st.g === w.g) return; st.g = w.g;
     var r = $("msRobot"), n = $("msName");
     if (r && G.MRobot) r.innerHTML = G.MRobot.svg(w.g, 56, "");
-    if (n && G.MRobot) n.textContent = G.MRobot.name(w.g);
+    if (n) n.textContent = rname();
     if (r) r.classList.toggle("rb-live", st.on);
   }
   function syncBar() {
@@ -486,86 +424,10 @@
     if (vis) paintRobot();
     if (st.on && (!vis)) stop();
   }
-  function paintW() {
-    var st = $("msWSt"), b = $("msWBtn"); if (!st || !b) return;
-    if (lsg("msQuran")) { st.textContent = "✓ محرك التلاوة محمّل، ويعمل التسميع الآلي دون إنترنت."; b.textContent = "المحرك محمّل ✓"; b.disabled = true; }
-    else { st.textContent = "المحرك غير محمّل بعد."; b.textContent = "تنزيل محرك التلاوة"; b.disabled = false; }
-  }
-  function packUi() {
-    var off = $("offSec"), host = off ? off.parentNode : null; if (!host || $("msWSec")) return;
-    var ws = document.createElement("div"); ws.className = "stg-sec"; ws.id = "msWSec";
-    ws.innerHTML = '<label>محرك التلاوة (يعمل على كل الأجهزة)</label><p class="sub">نزّل محرك التلاوة مرة واحدة (نحو ٩٠ ميجا، يُفضَّل واي فاي)، ثم يعمل التسميع الآلي بلا إنترنت على أي جهاز حديث. نموذج مدرَّب على تلاوة القرآن نفسها، ويعرض الكلمات كلمةً كلمة أثناء التلاوة.</p><p class="sub" style="font-size:12px">النموذج: NVIDIA FastConformer عبر مشروع Tilawa (ترخيص CC-BY-4.0).</p><p class="sub" id="msWSt" role="status" style="margin:8px 0;font-weight:600"></p><button type="button" id="msWBtn" class="p" style="width:100%">تنزيل محرك التلاوة</button><label style="display:flex;gap:6px;align-items:center;margin-top:10px;font-size:14px"><input type="checkbox" id="msWAlways"> استخدام محرك التلاوة دائمًا</label><button type="button" id="msWTest" style="width:100%;margin-top:10px">اختبار الميكروفون والمحرك (٥ ثوانٍ)</button><p class="sub" id="msWTestOut" style="margin:8px 0 0;white-space:pre-line"></p><button type="button" id="msWChk" style="width:100%;margin-top:10px">فحص جاهزية العمل دون إنترنت</button><p class="sub" id="msWChkOut" style="margin:8px 0 0;white-space:pre-line"></p>';
-    off.insertAdjacentElement("afterend", ws);
-    $("msWAlways").checked = lsg("msEng") === "quran";
-    $("msWAlways").onchange = function () { lss("msEng", this.checked ? "quran" : "auto"); };
-    $("msWBtn").onclick = function () {
-      var b = this, st = $("msWSt");
-      if (!navigator.onLine) { st.textContent = "اتصل بالإنترنت لتنزيل المحرك (مرة واحدة)."; return; }
-      b.disabled = true; b.textContent = "جارٍ التنزيل…"; st.textContent = "جارٍ التنزيل… لا تُغلق التطبيق.";
-      loadQuran(function (e) {
-        if (e) { st.textContent = "تعذّر تحميل ملف المحرك."; b.disabled = false; b.textContent = "أعد المحاولة"; return; }
-        G.MusammiQuran.load(function (pct) { st.textContent = "جارٍ التنزيل… " + arNum(pct) + "٪"; }).then(paintW, function (e) { st.textContent = "تعذّر التنزيل: " + whyFail(e); b.disabled = false; b.textContent = "أعد المحاولة"; });
-      });
-    };
-    paintW();
-    ["setBtn", "setBtn2"].forEach(function (id) { var e = $(id); if (e) e.addEventListener("click", function () { paintW(); }); });
-    $("msWTest").onclick = function () {
-      var out = $("msWTestOut"), b = this; ac(); b.disabled = true; out.textContent = "جارٍ التسجيل ٥ ثوانٍ… قل: بسم الله الرحمن الرحيم";
-      loadQuran(function (e) {
-        if (e) { b.disabled = false; out.textContent = "تعذّر تحميل ملف quran-engine.js"; return; }
-        G.MusammiQuran.test(5, function (r) {
-          b.disabled = false;
-          out.textContent = "إصدار المسمّع: " + MSV + "\nحالة الصوت: " + (r.state || "؟") + "\nأعلى مستوى للصوت: " + r.level.toFixed(3) + "\n" + (r.err ? "✗ " + r.err : "زمن التحليل: " + (r.ms / 1000).toFixed(1) + " ث لتسجيل " + arNum(r.secs) + " ث (" + (r.ms / 1000 / r.secs <= 1 ? "أسرع من الصوت ✓" : "أبطأ من الصوت") + ")\nما فهمه المحرك: «" + (r.text || "لا شيء") + "»");
-        });
-      });
-    };
-    $("msWChk").onclick = function () {
-      var out = $("msWChkOut"); out.textContent = "جارٍ الفحص…";
-      loadQuran(function (e) {
-        if (e) { out.textContent = "تعذّر تحميل ملف quran-engine.js"; return; }
-        G.MusammiQuran.check().then(function (r) {
-          var ok = function (v) { return v ? "✓" : "✗"; };
-          out.textContent = "إصدار المسمّع: " + MSV + "\n" + ok(r.sw) + " عامل الخدمة يعمل (يلزم لحفظ الملفات)\n" + ok(r.lib) + " مكتبة المحرك محفوظة\n" + ok(r.libs > 1) + " ملفات التشغيل (wasm) محفوظة: " + arNum(r.libs) + "\n" + ok(r.model >= 2) + " ملفات النموذج محفوظة: " + arNum(r.model) + "\n" + ok(r.flag) + " اكتمل التنزيل في هذا المتصفح" + (r.sw && r.lib && r.libs > 1 && r.model >= 2 && r.flag ? "\n\nجاهز للعمل دون إنترنت." : "\n\nأعد تنزيل المحرك وأنت متصل بالإنترنت، ثم أعد الفحص.");
-        });
-      });
-    };
-  }
-  /* سؤال عند فتح التطبيق: نزّل محرك التسميع الآن؟ (مرة واحدة، ويُعاد بعد ٣ أيام إن اختار «لاحقًا»)
-     حزمة المتصفح إن دعمها جهازه، وإلا محرك التلاوة الذي يعمل على كل الأجهزة */
-  function askDialog(o) {
-    var a = document.createElement("div"); a.id = "msAsk"; a.setAttribute("role", "dialog");
-    a.innerHTML = '<b>' + o.title + '</b><p id="msAskP">' + o.text + '</p><div class="row"><button type="button" id="msAskGo" class="p">' + o.yes + '</button><button type="button" id="msAskX">لاحقًا</button></div>';
-    document.body.appendChild(a);
-    var go = $("msAskGo"), no = $("msAskX"), p = $("msAskP");
-    setTimeout(function () { if (!go.disabled && a.parentNode && !go.hidden) a.remove(); }, 9000);   /* يختفي وحده، ويُسأل ثانية عند فتح قادم */
-    no.onclick = function () { a.remove(); if (lsg(o.key) !== "done") lss(o.key, "later:" + Date.now()); };
-    go.onclick = function () {
-      go.disabled = true; go.textContent = "جارٍ التنزيل…"; p.textContent = "لا تُغلق التطبيق حتى يكتمل التنزيل.";
-      o.install(function (txt) { p.textContent = "جارٍ التنزيل… " + txt; }, function (ok, why) {
-        if (ok) { lss(o.key, "done"); p.textContent = "تم! يعمل التسميع الآلي الآن دون إنترنت."; go.hidden = true; no.textContent = "إغلاق"; setTimeout(function () { a.remove(); }, 3500); paintW(); }
-        else { p.textContent = why; go.disabled = false; go.textContent = "أعد المحاولة"; }
-      });
-    };
-  }
-  function packAsk() {
-    var due = function (K) { var v = lsg(K); return !(v === "done" || (v && v.indexOf("later:") === 0 && Date.now() - (+v.slice(6) || 0) < 3 * 864e5)); };
-    if (!navigator.onLine) return;
-    var tries = 0;
-    (function wait() {
-      var o = $("offAsk"), u = $("updBar");
-      if (tries++ > 300) return;
-      if ((o && !o.classList.contains("hide")) || (u && !u.classList.contains("hide"))) return setTimeout(wait, 2000);
-      if (lsg("msQuran")) return;                       /* محرك التلاوة محمّل: لا حاجة لسؤال */
-        if (due("msWAsk")) return askDialog({ key: "msWAsk", title: "التسميع الآلي دون إنترنت", text: "لتعمل المراجعة بالتسميع الآلي دون إنترنت على أي جهاز ومتصفح، نزّل محرك التلاوة الآن (نحو ٩٠ ميجا، مرة واحدة). يُفضَّل استخدام واي فاي.", yes: "نعم، نزّل المحرك",
-          install: function (prog, done) { loadQuran(function (e) { if (e) return done(false, "تعذّر تحميل ملف المحرك. أعد المحاولة."); G.MusammiQuran.load(function (pct) { prog(arNum(pct) + "٪"); }).then(function () { done(true); }, function (e) { done(false, "تعذّر التنزيل: " + whyFail(e)); }); }); } });
-    })();
-  }
-
   function init() {
     if (!$("tjModes") || $("msBtn")) return;
-    if (G.MRobot) G.MRobot.css();
+    if (G.MRobot) { G.MRobot.css(); try { G.MRobot.name = function () { return rname(); }; } catch (e) {} }
     css(); fabInit();
-    packUi(); setTimeout(packAsk, 6000);
     /* زر إخفاء/إظهار الآيات: الكلمات المكشوفة بالمسمّع تُمسح أولًا، وإلا بقيت ظاهرة رغم الإخفاء */
     var hb = $("tjHideAya"); if (hb) hb.addEventListener("click", function () { clearRev(); });
     document.addEventListener("mrobot", function () { st.g = ""; paintRobot(); });
