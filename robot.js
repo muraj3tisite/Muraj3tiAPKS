@@ -1,8 +1,14 @@
-/* الروبوت اللطيف: مازن للذكور وعائشة للإناث.
+/* الروبوت اللطيف: الاسم الافتراضي «المسمّع الآلي»، والمستخدم هو من يختار له اسمًا (لكل جنس اسمه).
+   عند اختيار الجنس (من الحساب أو من «خريطتي») تظهر رسالة ترحيب من الروبوت يطلب فيها اسمًا.
    يظهر في شاشة الترحيب برسالة تحفيزية، ويظهر فوق زر المسمّع الآلي (musammi.js). */
 (function (G) {
   "use strict";
-  var NAME = { m: "مازن", f: "عائشة" };
+  var DEF = "المسمّع الآلي";
+  function lsg(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
+  function lss(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
+  /* الاسم الذي وضعه المستخدم (أو فارغ) واسم العرض */
+  function custom(g) { return String(lsg("mrbN_" + (g || who().g)) || "").trim(); }
+  function nm(g) { return custom(g) || DEF; }
 
   function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
 
@@ -86,35 +92,23 @@
       hi = h >= 4 && h < 12 ? "صباح الخير" : (h >= 18 || h < 4 ? "مساء الخير" : "أهلًا بك"),
       m = MSG[(dayNo() + tap) % MSG.length][f ? 1 : 0];
     el.className = "card rg"; el.setAttribute("role", "button"); el.tabIndex = 0;
-    el.setAttribute("aria-label", "رسالة من " + NAME[w.g] + ". اضغط لرسالة أخرى");
+    el.setAttribute("aria-label", "رسالة من " + nm(w.g) + ". اضغط لرسالة أخرى");
     el.innerHTML = svg(w.g, 84, "rb-float") +
       '<div class="rg-t"><h2>' + hi + (w.n ? " يا " + esc(w.n) : "") + '</h2>' +
-      '<p class="rg-who">أنا <b>' + NAME[w.g] + "</b>، " + (f ? "رفيقتك" : "رفيقك") + " في المراجعة والتسميع</p>" +
+      '<p class="rg-who">أنا <b>' + esc(nm(w.g)) + "</b>، " + (f ? "رفيقتك" : "رفيقك") + " في المراجعة والتسميع</p>" +
       '<p class="rg-msg">' + m + '</p><p class="rg-hint">اضغط لرسالة أخرى</p></div>';
   }
 
 
-  /* ===== إشعار الترحيب عند كل فتح للتطبيق ===== */
-  var HELLO = [
-    ["جاهز لأسمعك اليوم. بسم الله نبدأ!", "جاهزة لأسمعك اليوم. بسم الله نبدأ!"],
-    ["مراجعة اليوم تثبّت حفظ الغد. أنا معك!", "مراجعة اليوم تثبّت حفظ الغد. أنا معك!"],
-    ["يسعدني رجوعك. خطوة صغيرة اليوم تكفي.", "يسعدني رجوعك. خطوة صغيرة اليوم تكفي."],
-    ["افتح المصحف وسمّع لي، وأنا أتابعك كلمةً كلمة.", "افتحي المصحف وسمّعي لي، وأنا أتابعك كلمةً كلمة."]
-  ];
+  /* ===== إشعار الترحيب: عند أول دخول للتطبيق فقط ===== */
   var nt = null;
-  function seen() { try { return localStorage.getItem("mrbSeen") === "1"; } catch (e) { return false; } }
-  function mark() { try { localStorage.setItem("mrbSeen", "1"); } catch (e) {} }
+  function seen() { return lsg("mrbSeen") === "1"; }
+  function mark() { lss("mrbSeen", "1"); }
   function hideNote() { if (!nt) return; var n = nt; nt = null; n.classList.remove("on"); setTimeout(function () { n.remove(); }, 600); }
   function notify() {
-    if (!document.body || nt) return;
+    if (!document.body || nt || seen()) return;
     injectCss();
-    var w = who(), f = w.g === "f", first = !seen(), h = new Date().getHours(),
-      hi = h >= 4 && h < 12 ? "صباح الخير" : (h >= 18 || h < 4 ? "مساء الخير" : "أهلًا بك"), html;
-    if (first) {
-      html = '<span class="rn-two">' + svg("m", 52, "") + svg("f", 52, "") + '</span><div class="rn-t"><b>أهلًا بك في مراجعتي!</b>نحن <b style="display:inline">مازن</b> و<b style="display:inline">عائشة</b>، سنرافقك في المراجعة والتسميع.</div>';
-    } else {
-      html = svg(w.g, 52, "") + '<div class="rn-t"><b>' + hi + (w.n ? " يا " + esc(w.n) : "") + '</b>' + NAME[w.g] + ": " + HELLO[Math.floor(Math.random() * HELLO.length)][f ? 1 : 0] + "</div>";
-    }
+    var html = '<span class="rn-two">' + svg("m", 52, "") + svg("f", 52, "") + '</span><div class="rn-t"><b>أهلًا بك في مراجعتي!</b>سيرافقك «' + DEF + '» في المراجعة والتسميع.</div>';
     nt = document.createElement("div"); nt.className = "rn"; nt.setAttribute("role", "status"); nt.innerHTML = html;
     nt.addEventListener("click", hideNote);
     document.body.appendChild(nt);
@@ -122,17 +116,53 @@
     requestAnimationFrame(function () { requestAnimationFrame(function () { if (nt) nt.classList.add("on"); }); });
     var me = nt; setTimeout(function () { if (nt === me) hideNote(); }, 4000);
   }
+
+  /* ===== رسالة الترحيب واختيار اسم الروبوت: تظهر مرة لكل جنس، أول ما يحدّده المستخدم ===== */
+  function setName(g, n) {
+    n = String(n || "").replace(/\s+/g, " ").trim().slice(0, 20);
+    lss("mrbN_" + g, n);
+    greet(); try { document.dispatchEvent(new Event("mrobot")); } catch (e) {}
+  }
+  function ask(explicit) {
+    if (!document.body) return;
+    var hasProf = false; try { hasProf = !!(G.MPROFILE && G.MPROFILE()); } catch (e) {}
+    if (!explicit && !hasProf) return;                       /* لم يحدّد جنسه بعد */
+    var w = who(), g = w.g, f = g === "f";
+    if (lsg("mrbQ_" + g) === "1" || document.getElementById("rbAsk")) return;
+    var onb = document.getElementById("onb"); if (onb && !onb.classList.contains("hide")) return;
+    injectCss();
+    var d = document.createElement("div"); d.id = "rbAsk"; d.className = "tjg"; d.setAttribute("role", "dialog"); d.setAttribute("aria-modal", "true"); d.setAttribute("aria-labelledby", "rbAskT");
+    d.innerHTML = '<div class="tjg-box" style="max-width:420px"><div class="onb-hero">' + svg(g, 96, "rb-float") +
+      '<h2 id="rbAskT">أهلًا بك' + (w.n ? " يا " + esc(w.n) : "") + '! 👋</h2>' +
+      '<p class="sub">أنا روبوتك الذي ' + (f ? "سيسمّع لكِ" : "سيسمّع لك") + ' ويرافقك في المراجعة. ' + (f ? "اختاري" : "اختر") + ' لي اسمًا يعجبك، أو ' + (f ? "اتركيه" : "اتركه") + ' كما هو.</p></div>' +
+      '<label for="rbAskN">اسم الروبوت</label><input id="rbAskN" class="fld" type="text" maxlength="20" autocomplete="off" placeholder="' + DEF + '">' +
+      '<p id="rbAskE" class="auth-err hide" role="alert"></p>' +
+      '<button type="button" id="rbAskGo" class="p" style="width:100%;margin-top:14px">حفظ الاسم</button>' +
+      '<div class="row" style="justify-content:center"><button type="button" id="rbAskDef" class="auth-lnk">أبقِ الاسم «' + DEF + '»</button></div></div>';
+    document.body.appendChild(d); document.body.style.overflow = "hidden";
+    var inp = d.querySelector("#rbAskN"), er = d.querySelector("#rbAskE");
+    function close() { d.remove(); if (!document.querySelector(".tjg:not(.hide)")) document.body.style.overflow = ""; }
+    function save(def) {
+      var n = def ? "" : inp.value.replace(/\s+/g, " ").trim();
+      if (!def && n.length < 2) { er.textContent = "الاسم حرفان على الأقل"; er.classList.remove("hide"); return; }
+      lss("mrbQ_" + g, "1"); setName(g, n); close();
+    }
+    d.querySelector("#rbAskGo").onclick = function () { save(false); };
+    d.querySelector("#rbAskDef").onclick = function () { save(true); };
+    inp.addEventListener("keydown", function (e) { if (e.key === "Enter") { e.preventDefault(); save(false); } });
+    setTimeout(function () { try { inp.focus(); } catch (e) {} }, 80);
+  }
   /* عند تغيير الجنس (مثلًا من «خريطتي» دون حساب): حدّث البطاقة والزر فورًا */
-  function refresh() { greet(); try { document.dispatchEvent(new Event("mrobot")); } catch (e) {} }
+  function refresh() { greet(); try { document.dispatchEvent(new Event("mrobot")); } catch (e) {} ask(true); }
 
   function init() {
-    injectCss(); greet(); setTimeout(notify, 700);
+    injectCss(); greet(); setTimeout(notify, 700); setTimeout(function () { ask(false); }, 1500);
     var el = document.getElementById("robotGreet"); if (!el || el._rb) return; el._rb = 1;
     var next = function () { tap++; greet(); };
     el.addEventListener("click", next);
     el.addEventListener("keydown", function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); next(); } });
   }
 
-  G.MRobot = { svg: svg, who: who, name: function (g) { return NAME[g || who().g]; }, greet: greet, refresh: refresh, notify: notify, css: injectCss };
+  G.MRobot = { svg: svg, who: who, name: function (g) { return nm(g); }, custom: custom, setName: setName, DEF: DEF, ask: ask, greet: greet, refresh: refresh, notify: notify, css: injectCss };
   if (typeof document !== "undefined") { if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init); else init(); }
 })(typeof window !== "undefined" ? window : globalThis);

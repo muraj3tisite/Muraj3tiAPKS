@@ -589,15 +589,6 @@ html[data-ml="loose"] .mushaf-text .qline{height:2.3em}
   <div class="row" style="justify-content:center"><button type="button" id="onbOut" class="auth-lnk">تسجيل الخروج</button></div>
  </div>
 </div>
-<div id="rbn" class="tjg hide" role="dialog" aria-modal="true" aria-labelledby="rbnT">
- <div class="tjg-box" style="max-width:420px">
-  <div class="onb-hero"><div id="rbnPrev"></div><h2 id="rbnT"></h2><p class="sub" id="rbnP"></p></div>
-  <label for="rbnN">اسم الروبوت</label><input id="rbnN" class="fld" type="text" maxlength="20" autocomplete="off">
-  <p id="rbnErr" class="auth-err hide" role="alert"></p>
-  <button type="button" id="rbnGo" class="p" style="width:100%;margin-top:14px">حفظ الاسم</button>
-  <div class="row" style="justify-content:center"><button type="button" id="rbnDef" class="auth-lnk">أبقِ الاسم «المسمّع الآلي»</button></div>
- </div>
-</div>
 <div id="acct" class="tjg hide" role="dialog" aria-modal="true" aria-labelledby="acT">
  <div class="tjg-box" style="max-width:480px">
   <div class="tjg-top"><h2 id="acT">حسابي</h2><button id="acX" type="button" aria-label="إغلاق">✕ إغلاق</button></div>
@@ -1613,15 +1604,14 @@ function saveP(){try{localStorage.setItem(KEY(),JSON.stringify(P))}catch(e){}}
 function left(k){return Math.max(0,MAXC-((P.c&&P.c[k])||0))}
 function view(){return stage?Object.assign({},P,{av:stage}):P}
 function chKey(){return P&&P.g==="f"?"girl":"boy"}
-window.MPROFILE=function(){return P?{g:P.g,n:P.n,rn:P.rn||""}:null};
+window.MPROFILE=function(){return P?{g:P.g,n:P.n}:null};
 function syncCh(){if(!P)return;var c=chKey();if(typeof S!=="undefined"&&S&&S.ch!==c){S.ch=c;try{save()}catch(e){}try{render()}catch(e){}}}
 function btn(){
  var b=g("accBtn");if(!b)return;
  if(P&&uid){b.innerHTML=avHTML(P,40);b.classList.add("has-av");b.setAttribute("aria-label",P.n);b.title=P.n}
  else{b.textContent="👤";b.classList.remove("has-av");b.setAttribute("aria-label","الحساب");b.removeAttribute("title")}
- /* رسالة الترحيب تظهر مرة واحدة فقط: عند أول دخول للتطبيق */
- try{if(P&&uid&&!P.gr&&window.MRobot){MRobot.greet();P.gr=1;saveP()}}catch(e){}
- try{rbAsk()}catch(e){}}
+ try{window.MRobot&&MRobot.greet()}catch(e){}
+ try{window.MRobot&&MRobot.ask()}catch(e){}}
 
 /* ---------- التسجيل الأول: الاسم والعمر والجنس ---------- */
 function onbErr(t){var e=g("onbErr");e.textContent=t;e.classList.toggle("hide",!t)}
@@ -1641,26 +1631,7 @@ function onbGo(){
  P={n:n,a:a,g:gSel,av:gSel==="f"?"g1":"b1",bg:1,pt:0,fr:0,fl:0,c:{n:0,p:0},t:Date.now()};
  saveP();closeOnb();syncCh();btn()}
 
-/* ---------- تسمية الروبوت: تظهر أول ما يحدّد المستخدم جنسه (الاسم الافتراضي «المسمّع الآلي») ---------- */
 var RDEF="المسمّع الآلي";
-function rbErr(t){var e=g("rbnErr");e.textContent=t;e.classList.toggle("hide",!t)}
-function rbChanged(){try{document.dispatchEvent(new Event("mrobot"))}catch(e){}try{MRobot.refresh()}catch(e){}}
-function rbAsk(){
- if(!P||!uid||P.rq)return;
- if(!g("rbn").classList.contains("hide")||!g("onb").classList.contains("hide"))return;
- var f=P.g==="f";
- g("rbnT").textContent="أهلًا بك! 👋";
- g("rbnP").textContent="أنا روبوتك الذي "+(f?"سيسمّع لكِ":"سيسمّع لك")+" ويرافقك في المراجعة. "+(f?"اختاري":"اختر")+" لي اسمًا يعجبك، أو "+(f?"اتركيه":"اتركه")+" كما هو.";
- g("rbnN").value="";g("rbnN").placeholder=RDEF;rbErr("");
- try{g("rbnPrev").innerHTML=MRobot.svg(P.g,96,"")}catch(e){g("rbnPrev").innerHTML=""}
- g("rbn").classList.remove("hide");lock();setTimeout(function(){g("rbnN").focus()},60)}
-function rbSave(def){
- var n=def?"":g("rbnN").value.replace(/\s+/g," ").trim();
- if(!def&&n.length<2){rbErr("الاسم حرفان على الأقل");return}
- P.rn=n;P.rq=1;saveP();g("rbn").classList.add("hide");lock();rbChanged()}
-g("rbnGo").onclick=function(){rbSave(false)};
-g("rbnDef").onclick=function(){rbSave(true)};
-g("rbnN").addEventListener("keydown",function(e){if(e.key==="Enter"){e.preventDefault();rbSave(false)}});
 
 /* ---------- نافذة حسابي ---------- */
 function acMsg(t,good){var e=g("acMsg");if(!e)return;e.textContent=t;e.classList.toggle("hide",!t);e.classList.toggle("ok",!!good)}
@@ -1673,7 +1644,7 @@ function pProf(){
  +'<button type="button" class="p" id="acSaveN"'+(l?'':' disabled')+'>حفظ الاسم</button>'
  +'<label for="acA">العمر</label><input id="acA" class="fld" type="number" inputmode="numeric" min="4" max="99" value="'+P.a+'">'
  +'<div class="row"><button type="button" id="acSaveA">حفظ العمر</button></div>'
- +'<label for="acR">اسم الروبوت</label><input id="acR" class="fld" maxlength="20" placeholder="'+RDEF+'" value="'+esc(P.rn||"")+'">'
+ +'<label for="acR">اسم الروبوت</label><input id="acR" class="fld" maxlength="20" placeholder="'+RDEF+'" value="'+esc((window.MRobot&&MRobot.custom(P.g))||"")+'">'
  +'<div class="row"><button type="button" id="acSaveR">حفظ اسم الروبوت</button></div>'
  +'<p id="acMsg" class="auth-err hide" role="alert"></p>'
  +'<p class="sub" style="margin-top:14px"><span>شخصيتك في التطبيق:</span> <b>'+AV[P.g==="f"?"g1":"b1"].n+'</b></p>'}
@@ -1728,7 +1699,7 @@ g("acct").addEventListener("click",function(e){
  if(b.id==="acSaveR"){
   var rn=g("acR").value.replace(/\s+/g," ").trim();
   if(rn&&rn.length<2){acMsg("الاسم حرفان على الأقل");return}
-  P.rn=rn;P.rq=1;saveP();rbChanged();acMsg(rn?"تم حفظ اسم الروبوت":"عاد الاسم إلى «"+RDEF+"»",true);return}
+  try{MRobot.setName(P.g,rn)}catch(e){}acMsg(rn?"تم حفظ اسم الروبوت":"عاد الاسم إلى «"+RDEF+"»",true);return}
  if(b.id==="acReset"){
   MAUTH.reset(MAUTH.email()).then(function(){acMsg("أُرسل رابط إعادة تعيين كلمة المرور إلى بريدك",true)},function(){acMsg("تعذّر الإرسال، أعد المحاولة")});return}
  if(b.id==="acLogout"){MAUTH.logout().catch(function(){})}});
@@ -1842,6 +1813,6 @@ g("setBtn").addEventListener("click",open);g("setBtn2").addEventListener("click"
 })();
 </script>
 
-<script src="robot.js?v=3"></script>
+<script src="robot.js?v=4"></script>
 <script src="musammi.js?v=20"></script>
 </body></html>

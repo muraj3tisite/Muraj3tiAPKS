@@ -409,7 +409,7 @@
   }
   /* اسم الروبوت: يضعه المستخدم، والافتراضي «المسمّع الآلي» */
   var DEF_NAME = "المسمّع الآلي";
-  function rname() { try { var p = G.MPROFILE && G.MPROFILE(); var n = p && p.rn; return (n && String(n).replace(/\s+/g, " ").trim()) || DEF_NAME; } catch (e) { return DEF_NAME; } }
+  function rname() { try { return G.MRobot ? G.MRobot.name() : DEF_NAME; } catch (e) { return DEF_NAME; } }
   function paintRobot() {
     var w = G.MRobot ? G.MRobot.who() : { g: "m" };
     if (st.g === w.g) return; st.g = w.g;
@@ -426,7 +426,7 @@
   }
   function init() {
     if (!$("tjModes") || $("msBtn")) return;
-    if (G.MRobot) { G.MRobot.css(); try { G.MRobot.name = function () { return rname(); }; } catch (e) {} }
+    if (G.MRobot) G.MRobot.css();
     css(); fabInit();
     /* زر إخفاء/إظهار الآيات: الكلمات المكشوفة بالمسمّع تُمسح أولًا، وإلا بقيت ظاهرة رغم الإخفاء */
     var hb = $("tjHideAya"); if (hb) hb.addEventListener("click", function () { clearRev(); });
