@@ -4,10 +4,10 @@
 (function (G) {
   "use strict";
 
-  /* ===== الإعداد: عدّل BASE مرة واحدة فقط ببيان مستودعك على Hugging Face =====
-     يجب أن يحوي المستودع الملفين: fastconformer_full_mixed.onnx و vocab.json
-     (للتجربة دون تعديل الملف: في وحدة تحكم المتصفح اكتب localStorage.msQuranBase = "الرابط/") */
-  var BASE = "https://huggingface.co/YOUR_USER/YOUR_REPO/resolve/main/";
+  /* ===== الإعداد: مستودع النموذج على Hugging Face (يحوي الملفين fastconformer_full_mixed.onnx و vocab.json).
+     النموذج: NVIDIA FastConformer عبر مشروع Tilawa، بترخيص CC-BY-4.0 (يلزم ذكر المصدر). =====
+     لتغيير المستودع دون تعديل الملف: localStorage.msQuranBase = "الرابط/" */
+  var BASE = "https://huggingface.co/acibZ/tilawa-quran-onnx/resolve/main/";
   var MODEL_FILE = "fastconformer_full_mixed.onnx", VOCAB_FILE = "vocab.json";
   var ORT = "https://cdn.jsdelivr.net/npm/onnxruntime-web@1.24.2/dist/";
   var CACHE = "mquran-v1";   /* مخزن دائم للنموذج: لا يُمسح عند تحديث التطبيق */

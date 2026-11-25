@@ -144,7 +144,7 @@
     return st.ac;
   }
   G.MusammiAC = function () { return ac(); };
-  var MSV = "1.3.1";   /* رقم إصدار المسمّع: يظهر في الفحص لنتأكد أي نسخة تعمل */
+  var MSV = "1.3.2";   /* رقم إصدار المسمّع: يظهر في الفحص لنتأكد أي نسخة تعمل */
   var TOL = .75, STOL = .5;   /* حدّ التشابه: أخفض قليلًا مع محرك التلاوة لأن نطقه يُكتب بإملاء المصحف العثماني */
   function beep() {
     var n = Date.now(); if (n - st.beepT < 600) return; st.beepT = n;
@@ -397,7 +397,7 @@
   }
   function loadQuran(cb) {
     if (G.MusammiQuran) return cb(null);
-    var sc = document.createElement("script"); sc.src = "quran-engine.js?v=1";
+    var sc = document.createElement("script"); sc.src = "quran-engine.js?v=2";
     sc.onload = function () { cb(G.MusammiQuran ? null : 1); }; sc.onerror = function () { cb(1); };
     document.head.appendChild(sc);
   }
@@ -494,7 +494,7 @@
   function packUi() {
     var off = $("offSec"), host = off ? off.parentNode : null; if (!host || $("msWSec")) return;
     var ws = document.createElement("div"); ws.className = "stg-sec"; ws.id = "msWSec";
-    ws.innerHTML = '<label>محرك التلاوة (يعمل على كل الأجهزة)</label><p class="sub">نزّل محرك التلاوة مرة واحدة (نحو ٩٠ ميجا، يُفضَّل واي فاي)، ثم يعمل التسميع الآلي بلا إنترنت على أي جهاز حديث. نموذج مدرَّب على تلاوة القرآن نفسها، ويعرض الكلمات بعد كل جملة قصيرة.</p><p class="sub" id="msWSt" role="status" style="margin:8px 0;font-weight:600"></p><button type="button" id="msWBtn" class="p" style="width:100%">تنزيل محرك التلاوة</button><label style="display:flex;gap:6px;align-items:center;margin-top:10px;font-size:14px"><input type="checkbox" id="msWAlways"> استخدام محرك التلاوة دائمًا</label><button type="button" id="msWTest" style="width:100%;margin-top:10px">اختبار الميكروفون والمحرك (٥ ثوانٍ)</button><p class="sub" id="msWTestOut" style="margin:8px 0 0;white-space:pre-line"></p><button type="button" id="msWChk" style="width:100%;margin-top:10px">فحص جاهزية العمل دون إنترنت</button><p class="sub" id="msWChkOut" style="margin:8px 0 0;white-space:pre-line"></p>';
+    ws.innerHTML = '<label>محرك التلاوة (يعمل على كل الأجهزة)</label><p class="sub">نزّل محرك التلاوة مرة واحدة (نحو ٩٠ ميجا، يُفضَّل واي فاي)، ثم يعمل التسميع الآلي بلا إنترنت على أي جهاز حديث. نموذج مدرَّب على تلاوة القرآن نفسها، ويعرض الكلمات بعد كل جملة قصيرة.</p><p class="sub" style="font-size:12px">النموذج: NVIDIA FastConformer عبر مشروع Tilawa (ترخيص CC-BY-4.0).</p><p class="sub" id="msWSt" role="status" style="margin:8px 0;font-weight:600"></p><button type="button" id="msWBtn" class="p" style="width:100%">تنزيل محرك التلاوة</button><label style="display:flex;gap:6px;align-items:center;margin-top:10px;font-size:14px"><input type="checkbox" id="msWAlways"> استخدام محرك التلاوة دائمًا</label><button type="button" id="msWTest" style="width:100%;margin-top:10px">اختبار الميكروفون والمحرك (٥ ثوانٍ)</button><p class="sub" id="msWTestOut" style="margin:8px 0 0;white-space:pre-line"></p><button type="button" id="msWChk" style="width:100%;margin-top:10px">فحص جاهزية العمل دون إنترنت</button><p class="sub" id="msWChkOut" style="margin:8px 0 0;white-space:pre-line"></p>';
     off.insertAdjacentElement("afterend", ws);
     $("msWAlways").checked = lsg("msEng") === "quran";
     $("msWAlways").onchange = function () { lss("msEng", this.checked ? "quran" : "auto"); };
