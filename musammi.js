@@ -121,6 +121,8 @@
       ".tj-hideaya:not(.tj-hidden) .aya-t .qw.wrev .tj-c-jawaz{color:var(--tj-jawaz)!important}.tj-hideaya:not(.tj-hidden) .aya-t .qw.wrev .tj-c-madd2{color:var(--tj-madd2)!important}" +
       ".tj-hideaya:not(.tj-hidden) .aya-t .qw.wrev .tj-c-ghunna{color:var(--tj-ghunna)!important}.tj-hideaya:not(.tj-hidden) .aya-t .qw.wrev .tj-c-gray{color:var(--tj-gray)!important}" +
       ".tj-hideaya:not(.tj-hidden) .aya-t .qw.wrev .tj-c-tafkhim{color:var(--tj-tafkhim)!important}.tj-hideaya:not(.tj-hidden) .aya-t .qw.wrev .tj-c-qalqala{color:var(--tj-qalqala)!important}" +
+      ".tj-hideaya .aya-t .qw.wrev.werr,.tj-hideaya .aya-t .qw.wrev.werr *,.tj-hideaya:not(.tj-hidden) .aya-t .qw.wrev.werr [class*=tj-c-]{color:#d93025!important}" +
+      ".qw.werr{background:rgba(217,48,37,.16);box-shadow:0 0 0 1.5px rgba(217,48,37,.6);border-radius:.3em}" +
       ".qw.wre{animation:msRe 1.3s ease-out forwards;border-radius:.3em}.qw.wcur{animation:msCur 1.1s ease-out forwards;border-radius:.3em}" +
       "@keyframes msRe{0%{background:rgba(212,160,23,.32);box-shadow:0 0 0 1.5px rgba(212,160,23,.75)}100%{background:rgba(212,160,23,0);box-shadow:0 0 0 1.5px rgba(212,160,23,0)}}" +
       "@keyframes msCur{0%{background:rgba(212,160,23,.55);box-shadow:0 0 0 2px rgba(212,160,23,1)}100%{background:rgba(212,160,23,0);box-shadow:0 0 0 2px rgba(212,160,23,0)}}" +
@@ -193,8 +195,10 @@
     });
     return out;
   }
-  function reveal(i) { var w = W[i]; if (w) w.els.forEach(function (e) { e.classList.add("wrev"); }); }
-  function clearRev() { [].forEach.call(document.querySelectorAll("#mushafText .wrev,#mushafText .wre,#mushafText .wcur"), function (e) { e.classList.remove("wrev", "wre", "wcur"); }); }
+  function reveal(i) { var w = W[i]; if (w) w.els.forEach(function (e) { e.classList.add("wrev"); e.classList.remove("werr"); }); }
+  /* كلمات أخطأ فيها القارئ أو تخطّاها: تُكشف بالأحمر ليراها */
+  function markErr(a, b) { for (var i = a; i < b; i++) if (W[i]) W[i].els.forEach(function (e) { e.classList.add("wrev", "werr"); }); }
+  function clearRev() { [].forEach.call(document.querySelectorAll("#mushafText .wrev,#mushafText .wre,#mushafText .wcur"), function (e) { e.classList.remove("wrev", "wre", "wcur", "werr"); }); }
   function lock() {
     var sh = $("mushafSheet"); sh.classList.add("tj-hideaya", "ms-lock");
     try { sh.style.setProperty("--ms-ink", getComputedStyle($("mushafText")).color); } catch (e) {}
@@ -225,6 +229,18 @@
     if (T[j + 1]) { var c = T[j] + T[j + 1]; if (c.length >= 6 && wsim(w.t, c) >= .85) return { tok: 2, adv: 1 }; }
     var nx = W[p + 1];
     if (nx && !nx.loose && !nx.names && (w.t + nx.t).length >= 8 && wsim(w.t + nx.t, T[j]) >= .88) return { tok: 1, adv: 2 };
+    return null;
+  }
+  /* بعد خطأ: إن نطق القارئ كلمة صحيحة من الكلمات التالية (حتى ٦) وتلتها الكلمة التي بعدها صحيحة، فالكلمات بينهما أخطأ فيها أو لم يعرفها */
+  function resync(T, j, final) {
+    for (var k = 1; k <= 6; k++) {
+      var p = st.pos + k, x = W[p]; if (!x) break;
+      if (x.loose || x.names || sk(x.t).length < 3) continue;
+      var r = tryAt(p, T, j); if (!r) continue;
+      if (T[j + r.tok] !== undefined) { if (p + r.adv < W.length && !tryAt(p + r.adv, T, j + r.tok)) continue; }
+      else if (!final || sk(x.t).length < 4) continue;
+      return { p: p, r: r };
+    }
     return null;
   }
   function seq(p, T, s, lim) {
@@ -319,6 +335,10 @@
       if (jp) {
         for (a = jp.p; a < jp.q; a++) reveal(a);
         if (st.pos > st.max) st.max = st.pos;
+        if (jp.p > st.pos && jp.p - st.pos <= 12) {   /* قفزة قصيرة للأمام: كلمات تخطّاها القارئ */
+          markErr(st.pos, jp.p);
+          if (!st.erred) { st.errs++; beep(); }
+        }
         st.rr = jp.p < st.pos;   /* قفزة للخلف = إعادة قراءة */
         if (st.rr) markRe(jp.p, jp.q);
         st.pos = jp.q; st.j = jp.j; st.erred = false; adv();
@@ -333,6 +353,16 @@
       if ((st.j < st.fin.length ? (st.fc[st.j] || 1) : 1) < .5) { st.j++; continue; }
       /* في النتائج المؤقتة: لا بد أن يثبت الاختلاف نفسه في تحديثين متتاليين، فقد يصحّح التعرّف نفسه */
       if (!final) { var key = st.pos + "|" + T[st.j]; if (st.sus !== key) { st.sus = key; break; } }
+      var rs = resync(T, st.j, final);
+      if (rs) {
+        markErr(st.pos, rs.p);
+        if (!st.erred) { st.errs++; beep(); }
+        for (a = 0; a < rs.r.adv; a++) reveal(rs.p + a);
+        if (st.rr) markRe(rs.p, rs.p + rs.r.adv);
+        st.pos = rs.p + rs.r.adv; st.j += rs.r.tok; st.erred = false; adv();
+        if (st.pos >= W.length) return done();
+        continue;
+      }
       /* صافرة واحدة فقط لكل خطأ: لا تتكرر حتى تُقرأ كلمة صحيحة أو يعيد القارئ من موضع آخر */
       if (!st.erred) { st.erred = true; st.errs++; beep(); }
       st.j++;
@@ -434,7 +464,7 @@
     st.on = false; st.wait = false; clearTimeout(st.tm); clearTimeout(st.wt); if (st.rec) st.rec.stop();
     setLive(false); unlock(); if (!keep) toast("");
   }
-  function revealAll() { for (var i = 0; i < W.length; i++) reveal(i); }
+  function revealAll() { for (var i = 0; i < W.length; i++) if (W[i]) W[i].els.forEach(function (e) { e.classList.add("wrev"); }); }   /* تبقى علامة الأخطاء ظاهرة للمراجعة */
 
   /* ===== الزر العائم ===== */
   function fabInit() {
