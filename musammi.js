@@ -116,7 +116,9 @@
       ".tj-hideaya:not(.tj-hidden) .aya-t .qw.wrev .tj-c-jawaz{color:var(--tj-jawaz)!important}.tj-hideaya:not(.tj-hidden) .aya-t .qw.wrev .tj-c-madd2{color:var(--tj-madd2)!important}" +
       ".tj-hideaya:not(.tj-hidden) .aya-t .qw.wrev .tj-c-ghunna{color:var(--tj-ghunna)!important}.tj-hideaya:not(.tj-hidden) .aya-t .qw.wrev .tj-c-gray{color:var(--tj-gray)!important}" +
       ".tj-hideaya:not(.tj-hidden) .aya-t .qw.wrev .tj-c-tafkhim{color:var(--tj-tafkhim)!important}.tj-hideaya:not(.tj-hidden) .aya-t .qw.wrev .tj-c-qalqala{color:var(--tj-qalqala)!important}" +
-      ".qw.wre{background:rgba(212,160,23,.2);box-shadow:0 0 0 1.5px rgba(212,160,23,.6);border-radius:.3em}.qw.wcur{background:rgba(212,160,23,.42);box-shadow:0 0 0 2px rgba(212,160,23,.95);border-radius:.3em;transition:background .2s}" +
+      ".qw.wre{animation:msRe 1.3s ease-out forwards;border-radius:.3em}.qw.wcur{animation:msCur 1.1s ease-out forwards;border-radius:.3em}" +
+      "@keyframes msRe{0%{background:rgba(212,160,23,.32);box-shadow:0 0 0 1.5px rgba(212,160,23,.75)}100%{background:rgba(212,160,23,0);box-shadow:0 0 0 1.5px rgba(212,160,23,0)}}" +
+      "@keyframes msCur{0%{background:rgba(212,160,23,.55);box-shadow:0 0 0 2px rgba(212,160,23,1)}100%{background:rgba(212,160,23,0);box-shadow:0 0 0 2px rgba(212,160,23,0)}}" +
       ".ms-lock .qw.wrev{animation:msIn .6s cubic-bezier(.22,1.25,.36,1) both}" +
       "@keyframes msIn{0%{opacity:0;transform:translateY(7px) scale(.82);filter:blur(3px) drop-shadow(0 0 0 rgba(212,160,23,0))}55%{opacity:1;filter:blur(0) drop-shadow(0 0 7px rgba(212,160,23,.75))}100%{opacity:1;transform:none;filter:none}}.tj-hideaya.ms-lock .aya-num{pointer-events:none}" +
       "@media(prefers-reduced-motion:reduce){#msBtn.live,.ms-lock .qw.wrev{animation:none}}";
@@ -253,9 +255,10 @@
   /* إعادة القراءة: إطار شفاف على الكلمات المُعادة، ومؤشر أقوى على الكلمة التي وصل إليها الآن */
   function setCur(i) {
     [].forEach.call(document.querySelectorAll("#mushafText .wcur"), function (e) { e.classList.remove("wcur"); });
-    var w = W[i]; if (w) w.els.forEach(function (e) { e.classList.add("wcur"); });
+    var w = W[i]; if (w) w.els.forEach(function (e) { flash(e, "wcur"); });
   }
-  function markRe(a, b) { for (var i = a; i < b; i++) if (W[i]) W[i].els.forEach(function (e) { e.classList.add("wre"); }); if (b > a) setCur(b - 1); }
+  function flash(e, c) { e.classList.remove(c); void e.offsetWidth; e.classList.add(c); }   /* يعيد تشغيل الوميض */
+  function markRe(a, b) { for (var i = a; i < b; i++) if (W[i]) W[i].els.forEach(function (e) { flash(e, "wre"); }); if (b > a) setCur(b - 1); }
   function adv() {   /* بعد كل تقدّم: إن بلغ القارئ أبعد نقطة وصل إليها سابقًا انتهت الإعادة */
     if (st.pos > st.max) st.max = st.pos;
     if (st.rr && st.pos >= st.max) { st.rr = false; [].forEach.call(document.querySelectorAll("#mushafText .wcur"), function (e) { e.classList.remove("wcur"); }); }
