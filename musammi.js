@@ -4,9 +4,9 @@
   "use strict";
   /* ===== 1) التطبيع والمطابقة (لا يعتمد على المتصفح) ===== */
   function norm(s) {
-    return String(s || "").replace(/\u0670/g, "ا").replace(/[\u0640\u064B-\u065F\u06D6-\u06ED]/g, "")
+    return String(s || "").replace(/\u0648\u0670/g, "ا").replace(/\u0670/g, "ا").replace(/[\u0640\u064B-\u065F\u06D6-\u06ED]/g, "")
       .replace(/[\u0671\u0622\u0623\u0625]/g, "ا").replace(/ى/g, "ي").replace(/ة/g, "ه")
-      .replace(/ؤ/g, "و").replace(/ئ/g, "ي").replace(/[^\u0621-\u064A ]/g, " ").replace(/\s+/g, " ").trim();
+      .replace(/ؤ/g, "و").replace(/ئ/g, "ي").replace(/[^\u0621-\u064A ]/g, " ").replace(/\s+/g, " ").replace(/(^| )ء(?=ا)/g, "$1").trim();   /* ءامنوا، ءايات (مدّ أول الكلمة) = آمنوا، آيات */
   }
   /* هيكل الكلمة: بلا ألف، فلا يضرّ اختلاف رسم الألف الخنجرية (مٰلك/مالك) */
   function sk(w) { w = w.replace(/^ال(?=..)/, ""); return w.replace(/ا/g, ""); }
@@ -31,6 +31,7 @@
   function wsim(a, b) {
     var sa = sk(a), sb = sk(b);
     if (sa === sb) return 1;
+    if (/اء$/.test(a) !== /اء$/.test(b) && sk(a.replace(/اء$/, "ا")) === sk(b.replace(/اء$/, "ا"))) return .95;
     if (Math.min(sa.length, sb.length) < 3) return 0;
     var pa = pk(sa), pb = pk(sb);
     if (pa === pb) return .92;
@@ -39,6 +40,13 @@
     return 1 - lev(pa, pb) / L;
   }
   var LN = { ا: "الف", ل: "لام", م: "ميم", ص: "صاد", ر: "را", ك: "كاف", ه: "ها", ي: "يا", ع: "عين", ط: "طا", س: "سين", ح: "حا", ق: "قاف", ن: "نون" };
+  /* صيغ نطق كل حرف مقطّع كما يكتبها التعرّف الصوتي (ر: را/راء، ه: ها/هاء ...) */
+  var NV = { "ا": ["الف", "ا"], "ل": ["لام", "ل"], "م": ["ميم", "م"], "ص": ["صاد", "ص"], "ر": ["را", "راء", "ر"], "ك": ["كاف", "ك"], "ه": ["ها", "هاء", "ه"], "ي": ["يا", "ياء", "ي"], "ع": ["عين", "ع"], "ط": ["طا", "طاء", "ط"], "س": ["سين", "س"], "ح": ["حا", "حاء", "ح"], "ق": ["قاف", "ق"], "ن": ["نون", "ن"] };
+  function nameOk(c, t) {
+    var v = NV[c]; if (!v || !t) return false;
+    if (v.indexOf(t) >= 0) return true;
+    return sk(v[0]).length >= 3 && wsim(v[0], t) >= .85;
+  }
   var MUQ = /^(الم|المص|الر|المر|كهيعص|طه|طسم|طس|يس|ص|حم|عسق|ق|ن)$/;
   /* الحروف المقطّعة تُنطق أسماءً: الم ← «ألف لام ميم» (ويُقبل نطقها كما كُتبت) */
   function expectedWords(txt) {
@@ -83,7 +91,7 @@
     }
     return null;
   }
-  var API = { norm: norm, matchAyah: matchAyah, expectedWords: expectedWords, BSM: BSM, isBsm: isBsm, sim: sim, wsim: wsim };
+  var API = { nameOk: nameOk, norm: norm, matchAyah: matchAyah, expectedWords: expectedWords, BSM: BSM, isBsm: isBsm, sim: sim, wsim: wsim };
   if (typeof module !== "undefined" && module.exports) { module.exports = API; return; }
   G.Musammi = API;
 
@@ -91,7 +99,7 @@
   /* ===== 2) الواجهة والمحرك: تسميع كلمةً كلمة، من أي موضع في الصفحة ===== */
   var $ = function (i) { return document.getElementById(i); };
   var Q = null, W = [];
-  var st = { max: 0, rr: false, erred: false, on: false, rec: null, pos: -1, fin: [], itx: [], j: 0, tm: null, tt: null, errs: 0, s0: -1, beepT: 0, ac: null, g: "" };
+  var st = { wait: false, wt: null, fc: [], sus: "", max: 0, rr: false, erred: false, on: false, rec: null, pos: -1, fin: [], itx: [], j: 0, tm: null, tt: null, errs: 0, s0: -1, beepT: 0, ac: null, g: "" };
   function gN(m, f) { var w = G.MRobot && G.MRobot.who(); return w && w.g === "f" ? f : m; }
 
   function css() {
@@ -164,6 +172,7 @@
     }).catch(function () { cb(false); });
   }
   /* كلمات الصفحة بالترتيب. كل عنصر: t = الكلمة المتوقعة، els = شكل الكلمة (أو الكلمات) في الصفحة لإظهاره */
+  function muqOf(t) { if (MUQ.test(t)) return t; var u = t.replace(/ا$/, ""); return u !== t && MUQ.test(u) ? u : null; }
   function buildWords() {
     var groups = {}, order = [], out = [];
     [].forEach.call(document.querySelectorAll("#mushafText .aya-t"), function (a) {
@@ -174,10 +183,12 @@
       var els = groups[k], txt = Q && Q[k], n = els.length;
       if (!txt) return els.forEach(function (e) { out.push({ k: k, i: 0, t: "", els: [e], loose: true }); });
       var tk = norm(txt).split(" ").filter(Boolean), comp = tk.join("");
-      if (n === 1 && tk.length === 1 && MUQ.test(comp)) { out.push({ k: k, i: 0, t: comp, els: els, names: comp.split("").map(function (c) { return LN[c]; }) }); return; }
       tk.forEach(function (t, i) {
         var a = Math.floor(i * n / tk.length), b = Math.max(a + 1, Math.floor((i + 1) * n / tk.length));
-        out.push({ k: k, i: i, t: t, els: tk.length === n ? [els[i]] : els.slice(a, Math.min(n, b)) });
+        var e = tk.length === n ? [els[i]] : els.slice(a, Math.min(n, b));
+        /* الحروف المقطّعة في أول السورة (الر، الم، حم، كهيعص ...) تُنطق أسماءً، سواء كانت الآية كلها أو تتبعها كلمات (يوسف: الر تلك آيات...) */
+        var mq = i === 0 && (/:1$/.test(k) || k === "42:2") ? muqOf(t) : null;
+        out.push(mq ? { k: k, i: i, t: mq, els: e, names: mq.split("") } : { k: k, i: i, t: t, els: e });
       });
     });
     return out;
@@ -206,7 +217,7 @@
     if (w.names) {
       if (wm(w.t, T[j])) return { tok: 1, adv: 1 };
       var n = w.names.length; if (T.length - j < n) return null;
-      for (var i = 0; i < n; i++) if (wsim(w.names[i], T[j + i]) < .9) return null;
+      for (var i = 0; i < n; i++) if (!nameOk(w.names[i], T[j + i])) return null;
       return { tok: n, adv: 1 };
     }
     if (wm(w.t, T[j])) return { tok: 1, adv: 1 };
@@ -263,8 +274,8 @@
     if (st.pos > st.max) st.max = st.pos;
     if (st.rr && st.pos >= st.max) { st.rr = false; [].forEach.call(document.querySelectorAll("#mushafText .wcur"), function (e) { e.classList.remove("wcur"); }); }
   }
-  function step(final) {
-    if (!st.on) return;
+  function step(final, quiet) {
+    if (!st.on || st.wait) return;
     var T = st.fin.concat(st.itx), avail, stable, r, jp, a;
     if (st.j > T.length) st.j = T.length;
     var guard = 400;
@@ -291,6 +302,11 @@
         if (st.pos >= W.length) return done();
         continue;
       }
+      /* الحروف المقطّعة: إن نُطق بعضها فقط وما نُطق صحيح بالترتيب فننتظر الباقي ولا نحكم بالخطأ */
+      if (w.names && T.length - st.j < w.names.length) {
+        var pre = true; for (var q = 0; q < T.length - st.j; q++) if (!nameOk(w.names[q], T[st.j + q])) { pre = false; break; }
+        if (pre) break;
+      }
       /* تكرار الكلمة السابقة (تردّد) لا يُعدّ خطأً */
       if (st.pos > 0 && W[st.pos - 1].t && wm(W[st.pos - 1].t, T[st.j])) { st.j++; continue; }
       /* تساهل: كلمة تشبه المتوقعة (التعرّف شوّهها) وتليها الكلمة التالية الصحيحة ← نقبلها */
@@ -311,19 +327,25 @@
       }
       /* الخطأ لا يُحكم به إلا بعد ثلاث كلمات (أو سكوت)، لأن التعرّف قد يصحّح نفسه */
       if (!final && avail < 3) break;
+      /* وقفة قصيرة وسط القراءة: آخر كلمة قد يكون التعرّف ناقصًا فيها، فننتظر النتيجة النهائية قبل الحكم */
+      if (quiet && avail < 2) break;
+      /* كلام لم يتأكد منه التعرّف (ثقة منخفضة) لا نحكم عليه بالخطأ، نتجاوزه بصمت */
+      if ((st.j < st.fin.length ? (st.fc[st.j] || 1) : 1) < .5) { st.j++; continue; }
+      /* في النتائج المؤقتة: لا بد أن يثبت الاختلاف نفسه في تحديثين متتاليين، فقد يصحّح التعرّف نفسه */
+      if (!final) { var key = st.pos + "|" + T[st.j]; if (st.sus !== key) { st.sus = key; break; } }
       /* صافرة واحدة فقط لكل خطأ: لا تتكرر حتى تُقرأ كلمة صحيحة أو يعيد القارئ من موضع آخر */
       if (!st.erred) { st.erred = true; st.errs++; beep(); }
       st.j++;
     }
     /* تنظيف المخزن بعد استهلاك كل الكلمات */
-    if (!st.itx.length && st.j >= st.fin.length && st.fin.length) { st.fin = []; st.j = 0; }
+    if (!st.itx.length && st.j >= st.fin.length && st.fin.length) { st.fin = []; st.fc = []; st.j = 0; }
   }
-  function onSpeech(t, fin) {
+  function onSpeech(t, fin, conf) {
     if (!st.on) return;
-    var tk = toks(t);
-    if (fin) { st.fin = st.fin.concat(tk); st.itx = []; } else st.itx = tk;
+    var tk = toks(t), c = conf > 0 ? conf : 1;
+    if (fin) { tk.forEach(function () { st.fc.push(c); }); st.fin = st.fin.concat(tk); st.itx = []; } else st.itx = tk;
     step(fin);
-    clearTimeout(st.tm); st.tm = setTimeout(function () { step(true); }, st.tmo || 1000);
+    clearTimeout(st.tm); st.tm = setTimeout(function () { step(true, true); }, st.tmo || 1000);
   }
   function altScore(tk) {
     var T = st.fin.concat(tk), s = Math.min(st.j, st.fin.length), p, best = 0, r;
@@ -331,16 +353,27 @@
     for (p = 0; p < W.length; p++) { r = seq(p, T, s, 3); if (r.m > best) best = r.m; }
     return best;
   }
+  /* من بين بدائل التعرّف نختار الأوفق لموضع القارئ (بدائل الصياغة تقلّل الصافرات الكاذبة) */
   function bestAlt(alts) {
     var b = alts[0], bs = -1, i, s;
-    for (i = 0; i < alts.length; i++) { s = altScore(toks(alts[i])); if (s > bs) { bs = s; b = alts[i]; } }
+    for (i = 0; i < alts.length; i++) { s = altScore(toks(alts[i].t)); if (s > bs) { bs = s; b = alts[i]; } }
     return b;
   }
 
+  /* انتهت الصفحة: نسجّل تسميعها ونقلب للتالية ونكمل دون توقف. لا يتوقف المسمّع إلا بضغط الزر (أو آخر صفحة في المصحف) */
   function done() {
-    var m = st.errs, full = st.s0 === 0;
-    toast("✓ " + gN("أتممتَ", "أتممتِ") + " الصفحة" + (m ? " — " + gN("تعثّرتَ", "تعثّرتِ") + " " + (m === 1 ? "مرة واحدة" : m + " مرات") : " بلا أي تعثّر") + ". اضغط «أنهيت…» لتسجيلها.", "ok", 4500);
-    try { if (full && G.S) { G.S.tas = G.S.tas || {}; G.S.tas[G.tjState.pg] = { d: G.dkey(new Date()), ok: m ? 0 : 1 }; G.save(); } } catch (e) {}
+    var m = st.errs, full = st.s0 === 0, pg = G.tjState && G.tjState.pg;
+    try { if (full && G.S) { G.S.tas = G.S.tas || {}; G.S.tas[pg] = { d: G.dkey(new Date()), ok: m ? 0 : 1 }; G.save(); } } catch (e) {}
+    var msg = "✓ " + gN("أتممتَ", "أتممتِ") + " الصفحة" + (m ? " — " + gN("تعثّرتَ", "تعثّرتِ") + " " + (m === 1 ? "مرة واحدة" : m + " مرات") : " بلا أي تعثّر");
+    if (pg && pg < 604 && G.tjFlip) {
+      st.wait = true;            /* نحتفظ بما نُطق من الكلمات إلى أن تُرسم الصفحة التالية */
+      toast(msg + " — ننتقل إلى الصفحة التالية…", "ok", 3000);
+      clearTimeout(st.wt);
+      st.wt = setTimeout(function () { if (st.wait && st.on) { st.wait = false; toast("تعذّر فتح الصفحة التالية. تأكد من الاتصال ثم اضغط الزر للمتابعة.", "", 6000); stop(true); } }, 15000);
+      try { G.tjFlip(1); } catch (e) { st.wait = false; stop(true); }
+      return;
+    }
+    toast(msg + ". انتهى المصحف.", "ok", 5000);
     stop(true);
   }
 
@@ -354,7 +387,8 @@
     return { start: function (cb, onEnd) {
       r.onresult = function (e) { for (var i = e.resultIndex; i < e.results.length; i++) {
         var res = e.results[i];
-        if (res.isFinal) cb(bestAlt([].map.call(res, function (a) { return a.transcript; })), true); else cb(res[0].transcript, false);
+        var a = bestAlt([].map.call(res, function (x) { return { t: x.transcript, c: x.confidence }; }));
+        if (res.isFinal) cb(a.t, true, a.c); else cb(a.t, false);
       } };
       r.onerror = function (e) { onEnd(e.error); }; r.onend = function () { onEnd(); };
       r.start();
@@ -362,9 +396,13 @@
   }
 
   function resetPage() {
-    st.fin = []; st.itx = []; st.j = 0; st.pos = -1; st.s0 = -1; st.errs = 0; st.erred = false; st.max = 0; st.rr = false; clearTimeout(st.tm);
+    var carry = st.wait;   /* انتقال تلقائي: لا نمسح الكلام المنطوق، فقد يكون القارئ بدأ الصفحة التالية */
+    if (!carry) { st.fin = []; st.fc = []; st.itx = []; st.j = 0; }
+    st.sus = ""; st.pos = -1; st.s0 = -1; st.errs = 0; st.erred = false; st.max = 0; st.rr = false; st.wait = false;
+    clearTimeout(st.tm); clearTimeout(st.wt);
     W = buildWords();
     if (st.on) lock();
+    if (carry && st.on) { step(false); st.tm = setTimeout(function () { step(true, true); }, st.tmo || 1000); }
   }
   function setLive(on) {
     var b = $("msBtn"), r = $("msRobot");
@@ -393,7 +431,7 @@
     });
   }
   function stop(keep) {
-    st.on = false; clearTimeout(st.tm); if (st.rec) st.rec.stop();
+    st.on = false; st.wait = false; clearTimeout(st.tm); clearTimeout(st.wt); if (st.rec) st.rec.stop();
     setLive(false); unlock(); if (!keep) toast("");
   }
   function revealAll() { for (var i = 0; i < W.length; i++) reveal(i); }
