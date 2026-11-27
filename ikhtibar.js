@@ -1,19 +1,20 @@
 /* اختبار المحفوظ.
-   يقول صوتٌ «أكمل من قوله تعالى»، ثم تُتلى آية بصوت الشيخ محمد أيوب، ثم تبدأ فرصة القارئ ليكمل ما بعدها.
-   إن أكمل صحيحًا تظهر الآية، ويتابع الآيات التالية إلى العدد المحدّد، ثم تأتي آية جديدة، وهكذا.
-   الآيات تُختار عشوائيًا من الصفحات التي حدّدها المستخدم أنها محفوظة (S.a إلى S.b).
-   يحتاج الإنترنت: الصوت من everyayah.com والتعرّف الصوتي من المتصفح. */
+   تُتلى عبارة «أكمل من قوله تعالى» بتسجيل حقيقي (audio/akmil.mp3)، ثم آية بصوت الشيخ محمد أيوب،
+   ثم تبدأ فرصة القارئ: يكمل متواصلًا عدة آيات (٢ أو ٣ أو ٥ أو ١٠ أو حتى نهاية الصفحة) وتظهر كل آية حين يتمّها.
+   إن أتمّ الكل صحيحًا نجح الاختبار وجاءت آية جديدة، وإلا ظهر الصحيح وبُيّن موضع الخطأ.
+   الآيات تُختار عشوائيًا من الصفحات المحفوظة (S.a إلى S.b). يحتاج الإنترنت: الصوت من everyayah.com والتعرّف من المتصفح. */
 (function (G) {
   "use strict";
   var M = G.Musammi;
   if (!M) return;
   var $ = function (i) { return document.getElementById(i); };
   var AUDIO = "https://everyayah.com/data/Muhammad_Ayyoub_128kbps/";   /* ملفات SSSAAA.mp3 */
-  var PHRASE = "أكمل من قوله تعالى";
+  var PHRASE = "أكمل من قوله تعالى", PHRASE_AUDIO = "audio/akmil.mp3";   /* تسجيل حقيقي يضعه صاحب التطبيق */
   var TOL = .75;
 
-  var CFG = { n: 5, c: 3 };   /* عدد الاختبارات (٥–١٠)، وعدد الآيات المطلوب إكمالها في كل اختبار (١–٥) */
-  try { var sv = JSON.parse(localStorage.getItem("ikCfg") || "null"); if (sv && sv.n >= 5 && sv.n <= 10 && sv.c >= 1 && sv.c <= 5) CFG = { n: sv.n, c: sv.c }; } catch (e) {}
+  var CS = [2, 3, 5, 10, 0];   /* عدد الآيات المطلوب إكمالها في الاختبار الواحد؛ ٠ = حتى نهاية الصفحة */
+  var CFG = { n: 5, c: 5 };   /* عدد الاختبارات (٥–١٠) */
+  try { var sv = JSON.parse(localStorage.getItem("ikCfg") || "null"); if (sv && sv.n >= 5 && sv.n <= 10 && CS.indexOf(sv.c) >= 0) CFG = { n: sv.n, c: sv.c }; } catch (e) {}
   function saveCfg() { try { localStorage.setItem("ikCfg", JSON.stringify(CFG)); } catch (e) {} }
 
   var AR = function (n) { return String(n).replace(/\d/g, function (d) { return "٠١٢٣٤٥٦٧٨٩"[d]; }); };
@@ -45,16 +46,23 @@
   function sName(s) { return String(D.V.NM[s - 1] || "").replace(/^سُورَةُ\s*/, "") || ("سورة " + AR(s)); }
   var pad3 = function (n) { return ("00" + n).slice(-3); };
 
-  /* اختيار آيات الأسئلة: كل سؤال آية يتبعها (حتى c) آيات من السورة نفسها داخل المحفوظ */
+  /* طول السلسلة بعد آية السؤال: عدد محدّد، أو حتى نهاية صفحة آية السؤال (بحدٍّ أقصى ٢٠)، داخل السورة والمحفوظ */
+  function chainLen(k, c, R) {
+    var len = 0, end;
+    if (c > 0) { while (len < c && k + len + 1 <= R.hi && D.s[k + len + 1] === D.s[k]) len++; return len; }
+    end = D.pst[pageOf(k)];
+    while (len < 20 && k + len + 1 <= R.hi && D.s[k + len + 1] === D.s[k] && D.ae[k + len + 1] <= end) len++;
+    return len;
+  }
   function pick(n, c, R) {
-    var out = [], used = {}, tries = 0, k, len, j, clash;
+    var out = [], used = {}, tries = 0, k, len, j, clash, need = c > 0 ? c : 2;
     while (out.length < n && tries < 900) {
       tries++;
       k = R.lo + Math.floor(Math.random() * (R.hi - R.lo + 1));
-      len = 0; while (len < c && k + len + 1 <= R.hi && D.s[k + len + 1] === D.s[k]) len++;
-      if (len < 1 || (tries < 500 && len < c)) continue;        /* نفضّل السلسلة الكاملة أولًا */
+      len = chainLen(k, c, R);
+      if (len < 1 || (tries < 500 && len < need)) continue;      /* نفضّل السلسلة الكاملة أولًا */
       clash = false; for (j = k; j <= k + len; j++) if (used[j]) clash = true;
-      if (clash && tries < 700) continue;                        /* ثم نسمح بالتداخل إن ضاق المحفوظ */
+      if (clash && tries < 700) continue;                         /* ثم نسمح بالتداخل إن ضاق المحفوظ */
       for (j = k; j <= k + len; j++) used[j] = 1;
       out.push({ k: k, len: len });
     }
@@ -88,38 +96,96 @@
     return { disp: disp, E: E, muq: muq };
   }
 
-  /* ===== المطابقة: كلمات الآية بالترتيب، مع تسامح بسيط مع أخطاء التعرّف ===== */
-  function allowed(n) { return n < 8 ? 0 : (n < 16 ? 1 : 2); }   /* تسامح مع خطأ التعرّف في الآيات الطويلة فقط */
-  function align(E, S, muq) {
-    var n = E.length, p = 0, i = 0, miss = 0, q, ok;
+  /* ===== سلسلة الآيات المطلوبة: كلمات متوقعة متصلة، وحدود كل آية ===== */
+  function sk(w) { w = w.replace(/^ال(?=..)/, ""); return w.replace(/ا/g, ""); }
+  function prepChain(ks) {
+    var ch = { ks: ks, keys: [], ay: [], E: [], muqAt: {}, disp: [] };
+    ks.forEach(function (k, j) {
+      var key = keyOf(k), P = prep(key), base = ch.E.length;
+      P.E.forEach(function (t) { ch.E.push(t); });
+      if (P.muq) ch.muqAt[base] = P.muq;
+      P.disp.forEach(function (w) { ch.disp.push({ raw: w.raw, a: w.a + base, b: w.b + base, ay: j }); });
+      ch.keys.push(key); ch.ay.push({ start: base, end: ch.E.length, n: D.a[k] });
+    });
+    return ch;
+  }
+  /* المطابقة: كلمات الآيات بالترتيب، مع تسامح بسيط مع أخطاء التعرّف */
+  function allowed(n) { return n < 8 ? 0 : (n < 16 ? 1 : 2); }   /* تسامح في الآيات الطويلة فقط */
+  function align(E, S, muqAt) {
+    var n = E.length, p = 0, i = 0, miss = [], q, ok, mq;
+    muqAt = muqAt || {};
     while (i < S.length && p < n) {
-      if (p === 0 && muq) {
-        if (M.wsim(E[0], S[i]) >= TOL) { p = 1; i++; continue; }
-        ok = true; for (q = 0; q < muq.length; q++) if (!M.nameOk(muq[q], S[i + q])) { ok = false; break; }
-        if (ok) { p = 1; i += muq.length; continue; }
+      mq = muqAt[p];
+      if (mq) {
+        if (M.wsim(E[p], S[i]) >= TOL) { p++; i++; continue; }
+        ok = true; for (q = 0; q < mq.length; q++) if (!M.nameOk(mq[q], S[i + q])) { ok = false; break; }
+        if (ok) { p++; i += mq.length; continue; }
         i++; continue;
       }
       if (M.wsim(E[p], S[i]) >= TOL) { p++; i++; continue; }
       /* كلمة بدل كلمة: التالية تطابق ما بعدها */
-      if (S[i + 1] !== undefined && p + 1 < n && M.wsim(E[p + 1], S[i + 1]) >= TOL) { miss++; p++; i++; continue; }
+      if (S[i + 1] !== undefined && p + 1 < n && M.wsim(E[p + 1], S[i + 1]) >= TOL) { miss.push(p); p++; i++; continue; }
       /* كلمة ناقصة: ما نُطق يطابق الكلمة التي بعدها */
-      if (p + 1 < n && M.wsim(E[p + 1], S[i]) >= TOL && (S[i + 1] === undefined || p + 2 >= n || M.wsim(E[p + 2], S[i + 1]) >= TOL)) { miss++; p += 2; i++; continue; }
+      if (p + 1 < n && M.wsim(E[p + 1], S[i]) >= TOL && (S[i + 1] === undefined || p + 2 >= n || M.wsim(E[p + 2], S[i + 1]) >= TOL)) { miss.push(p); p += 2; i++; continue; }
       i++;   /* كلام زائد أو ضجيج */
     }
-    return { p: Math.min(p, n), miss: miss };
+    return { p: Math.min(p, n), miss: miss.length, missAt: miss };
+  }
+  /* إن أعاد القارئ آية السؤال أولًا (عادة شائعة) نتجاوز ما أعاده */
+  function stripLead(S, P0, E, muqAt) {
+    if (!S.length || !P0 || !P0.length || (muqAt && muqAt[0])) return S;
+    if (M.wsim(E[0], S[0]) >= TOL) return S;
+    var i = 0, p = 0;
+    while (i < S.length && p < P0.length && M.wsim(P0[p], S[i]) >= TOL) { p++; i++; }
+    return (p >= 2 || (p >= 1 && P0.length === 1)) ? S.slice(i) : S;
+  }
+  /* هل كل آية ضمن تسامحها؟ */
+  function ayOK(ch, r) {
+    return ch.ay.every(function (A) { return r.missAt.filter(function (q) { return q >= A.start && q < A.end; }).length <= allowed(A.end - A.start); });
+  }
+  function failAy(ch, r) {
+    for (var j = 0; j < ch.ay.length; j++) {
+      var A = ch.ay[j];
+      if (A.end > r.p || r.missAt.filter(function (q) { return q >= A.start && q < A.end; }).length > allowed(A.end - A.start)) return j;
+    }
+    return ch.ay.length - 1;
   }
 
-  /* ===== التعرّف الصوتي (عبر الإنترنت) ===== */
+  /* ===== تعرّف الآية من كلام القارئ (على القرآن كله) ===== */
+  var IDX = null;
+  function buildIdx() {
+    IDX = { inv: {}, len: {} };
+    Object.keys(Q).forEach(function (key) {
+      var seen = {}, c = 0;
+      M.norm(Q[key]).split(" ").filter(Boolean).forEach(function (t) { var x = sk(t); if (!x || seen[x]) return; seen[x] = 1; c++; (IDX.inv[x] = IDX.inv[x] || []).push(key); });
+      IDX.len[key] = c;
+    });
+  }
+  function identify(S) {
+    if (!Q || S.length < 3) return null;
+    if (!IDX) buildIdx();
+    var seen = {}, tot = 0, W = {}, best = null, bs = 0, N = Object.keys(IDX.len).length;
+    S.forEach(function (t) {
+      var x = sk(t), L = IDX.inv[x]; if (!x || seen[x] || !L) return; seen[x] = 1;
+      var w = Math.log(N / L.length); tot += w;
+      L.forEach(function (k) { W[k] = (W[k] || 0) + w; });
+    });
+    if (!tot) return null;
+    Object.keys(W).forEach(function (k) { var cov = W[k] / tot; if (cov > bs && W[k] / (IDX.len[k] || 1) > .45) { bs = cov; best = k; } });
+    return bs >= .6 ? { key: best, score: bs } : null;
+  }
+
+  /* ===== التعرّف الصوتي (عبر الإنترنت): نختار من بدائل التعرّف الأوفق للمطلوب ===== */
   function toks(s) { var n = M.norm(s); return n ? n.split(" ") : []; }
-  function listen(E, muq, onProg, onErr) {
+  function listen(score, onProg, onErr) {
     var SR = G.SpeechRecognition || G.webkitSpeechRecognition; if (!SR) return null;
     var r = new SR(), fin = [], itx = [], active = true;
-    r.lang = "ar-SA"; r.continuous = true; r.interimResults = true; r.maxAlternatives = 3;
+    r.lang = "ar-SA"; r.continuous = true; r.interimResults = true; r.maxAlternatives = 5;
     try { if ("processLocally" in r) r.processLocally = false; } catch (e) {}
     r.onresult = function (e) {
       for (var i = e.resultIndex; i < e.results.length; i++) {
         var res = e.results[i], best = [], bs = -1, k, tk, sc;
-        for (k = 0; k < res.length; k++) { tk = toks(res[k].transcript); sc = align(E, fin.concat(tk), muq).p; if (sc > bs) { bs = sc; best = tk; } }
+        for (k = 0; k < res.length; k++) { tk = toks(res[k].transcript); sc = score(fin.concat(tk)); if (sc > bs) { bs = sc; best = tk; } }
         if (res.isFinal) { fin = fin.concat(best); itx = []; } else itx = best;
       }
       onProg(fin.concat(itx));
@@ -130,28 +196,20 @@
     return { stop: function () { active = false; try { r.abort(); } catch (e) {} } };
   }
 
-  /* ===== الصوت: عبارة الطلب (نطق المتصفح) وتلاوة الشيخ محمد أيوب ===== */
+  /* ===== الصوت: عبارة «أكمل من قوله تعالى» (تسجيل حقيقي) وتلاوة الشيخ محمد أيوب ===== */
   var AU = null;
-  function say(t) {
-    return new Promise(function (res) {
-      var ss = G.speechSynthesis; if (!ss || typeof G.SpeechSynthesisUtterance === "undefined") return res(false);
-      var vs = ss.getVoices ? ss.getVoices() : [];
-      if (vs.length && !vs.some(function (v) { return /^ar/i.test(v.lang); })) return res(false);   /* لا صوت عربي في الجهاز */
-      var u = new G.SpeechSynthesisUtterance(t), d = false, f = function () { if (!d) { d = true; res(true); } };
-      u.lang = "ar-SA"; u.rate = .9; u.onend = f; u.onerror = f; setTimeout(f, 6000);
-      try { ss.cancel(); ss.speak(u); } catch (e) { f(); }
-    });
-  }
-  function play(k) {
+  function playSrc(src, maxMs) {
     return new Promise(function (res) {
       var d = false, f = function (v) { if (!d) { d = true; res(v); } };
       AU.onended = function () { f(true); }; AU.onerror = function () { f(false); };
-      AU.src = AUDIO + pad3(D.s[k]) + pad3(D.a[k]) + ".mp3";
+      AU.src = src;
       var p = AU.play(); if (p && p.catch) p.catch(function () { f(false); });
-      setTimeout(function () { f(false); }, 120000);
+      setTimeout(function () { f(false); }, maxMs);
     });
   }
-  function silence() { try { if (AU) { AU.onended = null; AU.onerror = null; AU.pause(); } } catch (e) {} try { G.speechSynthesis && G.speechSynthesis.cancel(); } catch (e) {} }
+  var playPhrase = function () { return playSrc(PHRASE_AUDIO, 10000); };   /* إن لم يوجد الملف يستمر الاختبار بالنص فقط */
+  var play = function (k) { return playSrc(AUDIO + pad3(D.s[k]) + pad3(D.a[k]) + ".mp3", 120000); };
+  function silence() { try { if (AU) { AU.onended = null; AU.onerror = null; AU.pause(); } } catch (e) {} }
 
   /* ===== الجلسة ===== */
   var SID = 0, T = null, CUR = null;
@@ -160,6 +218,7 @@
   var CSS = "#t-test .ik-top{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px}" +
     "#t-test .ik-st{font-weight:700;margin:12px 0 4px;min-height:1.8em}" +
     "#t-test .ik-ay{font-family:'Amiri Quran','Amiri','Noto Naskh Arabic',serif;font-size:26px;line-height:2.6;text-align:justify;min-height:3em;padding:6px 4px}" +
+    "#t-test .ikn{color:var(--mut);font-size:.8em;margin-inline-start:2px}" +
     "#t-test .ikw{display:inline-block;margin:0 3px;padding:0 6px;border-radius:8px;transition:background .25s,color .25s}" +
     "#t-test .ikw:not(.on){color:transparent;background:var(--acc2);text-shadow:none;user-select:none}" +
     "#t-test .ik-ay.ok .ikw.on{color:var(--ok)}" +
@@ -178,18 +237,18 @@
 
   function renderSetup(msg) {
     css(); var el = root(); if (!el) return;
-    var R = D && memRange(), seg1 = "", seg2 = "", i, cl = ["آية", "آيتان", "٣ آيات", "٤ آيات", "٥ آيات"];
+    var R = D && memRange(), seg1 = "", seg2 = "", i, cl = { 2: "آيتان", 3: "٣ آيات", 5: "٥ آيات", 10: "١٠ آيات", 0: "إلى نهاية الصفحة" };
     for (i = 5; i <= 10; i++) seg1 += '<button data-n="' + i + '" aria-pressed="' + (CFG.n === i) + '">' + AR(i) + "</button>";
-    for (i = 1; i <= 5; i++) seg2 += '<button data-c="' + i + '" aria-pressed="' + (CFG.c === i) + '">' + cl[i - 1] + "</button>";
+    CS.forEach(function (c) { seg2 += '<button data-c="' + c + '" aria-pressed="' + (CFG.c === c) + '">' + cl[c] + "</button>"; });
     el.innerHTML = '<div class="card"><h2>اختبار محفوظي</h2>' +
-      '<p class="sub">يقول لك الصوت «' + PHRASE + '» ثم تُتلى آية بصوت الشيخ محمد أيوب. ' + gn("أكمل", "أكملي") + ' ما بعدها من حفظك، فإن أصبتَ ظهرت الآية وتابعتَ الآيات التالية، ثم تأتي آية جديدة.</p>' +
+      '<p class="sub">يقول لك الصوت «' + PHRASE + '» ثم تُتلى آية بصوت الشيخ محمد أيوب. ' + gn("أكمل", "أكملي") + ' ما بعدها من حفظك متواصلًا إلى العدد المحدّد، وتظهر كل آية حين تتمّها. ثم تأتي آية جديدة.</p>' +
       (msg ? '<p class="warn" role="alert">' + esc(msg) + "</p>" : "") +
       (R ? '<p class="sub" style="margin-top:8px">من محفوظك: الصفحات ' + AR(R.a) + " إلى " + AR(R.b) + ".</p>"
          : '<p class="warn">حدّد حفظك أولًا من «اليوم ← تعديل موضع حفظي» ليُختار الاختبار من محفوظك.</p>') +
       '<label>عدد الاختبارات</label><div class="seg" id="ikN">' + seg1 + "</div>" +
-      '<label>عدد الآيات المطلوب إكمالها في كل اختبار</label><div class="seg" id="ikC">' + seg2 + "</div>" +
+      '<label>المطلوب إكماله بعد الآية المسموعة</label><div class="seg" id="ikC">' + seg2 + "</div>" +
       '<div class="row"><button class="p" id="ikGo"' + (R ? "" : " disabled") + ">ابدأ الاختبار</button></div>" +
-      '<p class="sub" style="margin-top:10px">يحتاج اتصالًا بالإنترنت وإذن الميكروفون.</p></div>';
+      '<p class="sub" style="margin-top:10px">يحتاج اتصالًا بالإنترنت وإذن الميكروفون. اقرأ بصوت واضح وهادئ وقريب من الجهاز.</p></div>';
   }
 
   function renderRun() {
@@ -202,73 +261,87 @@
       '<div class="row"><button id="ikSk">لا أعرف</button><button id="ikQt">إنهاء الاختبار</button></div></div>';
   }
 
-  function words(P, upto, all, ok) {
-    return P.disp.map(function (w) { var on = all || w.b <= upto; return '<span class="ikw' + (on ? " on" : "") + (all && !ok && w.a >= upto ? " x" : "") + '">' + esc(w.raw) + "</span>"; }).join(" ");
+  /* عرض السلسلة: كل آية تظهر كلماتها بقدر ما أُتمّ منها، ورقم الآية يظهر حين تكتمل */
+  function renderChain(ch, p, bad, all, ok) {
+    return ch.ay.map(function (A, j) {
+      var inner = ch.disp.filter(function (w) { return w.ay === j; }).map(function (w) {
+        var on = all || w.b <= p, x = false, q;
+        if (all && !ok) { x = w.a >= p; for (q = w.a; q < w.b; q++) if (bad[q]) x = true; }
+        return '<span class="ikw' + (on ? " on" : "") + (x ? " x" : "") + '">' + esc(w.raw) + "</span>";
+      }).join(" ");
+      return inner + ((all || p >= A.end) ? ' <span class="ikn">﴿' + AR(A.n) + "﴾</span>" : "");
+    }).join(" ");
   }
 
-  /* فرصة القارئ لإكمال آية: تُرجع true إن أكملها صحيحة */
-  function chance(sid, key, label) {
+  /* فرصة القارئ: يكمل متواصلًا سلسلة الآيات. تُرجع {ok, p, heard} */
+  function chance(sid, ch, P0, label) {
     return new Promise(function (resolve) {
-      var P = prep(key), n = P.E.length, allow = allowed(n), start = Date.now(), lim = Math.min(70000, 12000 + 1500 * n),
-        lastLen = 0, lastT = Date.now(), done = false, rec = null, iv = null, cur = { p: 0, miss: 0 };
-      var box = $("ikAy"); box.className = "ik-ay"; box.innerHTML = words(P, 0, false, true);
+      var N = ch.E.length, start = Date.now(), lim = Math.min(300000, 15000 + 1800 * N), lastLen = 0, lastT = Date.now(),
+        done = false, rec = null, iv = null, cur = { p: 0, miss: 0, missAt: [] }, heard = [], box = $("ikAy");
+      var ev = function (S) { return align(ch.E, stripLead(S, P0, ch.E, ch.muqAt), ch.muqAt); };
+      var good = function (r) { return r.p >= N && ayOK(ch, r); };
+      box.className = "ik-ay"; box.innerHTML = renderChain(ch, 0, {}, false, true);
       setSt("🎤 " + label);
       function finish(ok) {
         if (done) return; done = true; clearInterval(iv); if (rec) rec.stop(); CUR = null;
-        if (!dead(sid)) { box.className = "ik-ay " + (ok ? "ok" : "bad"); box.innerHTML = words(P, cur.p, true, ok); }
-        resolve(ok);
+        if (!dead(sid)) {
+          var bad = {}; cur.missAt.forEach(function (q) { bad[q] = 1; });
+          box.className = "ik-ay " + (ok ? "ok" : "bad"); box.innerHTML = renderChain(ch, cur.p, bad, true, ok);
+        }
+        resolve({ ok: ok, p: cur.p, r: cur, heard: heard });
       }
       CUR = { finish: finish };
-      rec = listen(P.E, P.muq, function (S) {
+      rec = listen(function (S) { return ev(S).p; }, function (S) {
         if (done) return;
-        cur = align(P.E, S, P.muq);
-        box.innerHTML = words(P, cur.p, false, true);
+        heard = S; cur = ev(S);
+        box.innerHTML = renderChain(ch, cur.p, {}, false, true);
         if (S.length !== lastLen) { lastLen = S.length; lastT = Date.now(); }
-        if (cur.p >= n) finish(cur.miss <= allow);
+        if (cur.p >= N) finish(good(cur));
       }, function (err) {
-        T && (T.fatal = err === "not-allowed" || err === "service-not-allowed" ? "اسمح للموقع باستخدام الميكروفون ثم أعد المحاولة."
-          : "تعذّر التعرّف الصوتي. تأكد من اتصالك بالإنترنت ثم أعد المحاولة.");
+        if (T) T.fatal = (err === "not-allowed" || err === "service-not-allowed") ? "اسمح للموقع باستخدام الميكروفون ثم أعد المحاولة." : "تعذّر التعرّف الصوتي. تأكد من اتصالك بالإنترنت ثم أعد المحاولة.";
         finish(false);
       });
-      if (!rec) { T && (T.fatal = "هذا المتصفح لا يدعم التعرّف الصوتي. استخدم Chrome أو Edge أو Safari."); return finish(false); }
+      if (!rec) { if (T) T.fatal = "هذا المتصفح لا يدعم التعرّف الصوتي. استخدم Chrome أو Edge أو Safari."; return finish(false); }
       iv = setInterval(function () {
         var el = Date.now() - start; setBar("ikTm", 100 - el / lim * 100);
-        if (el > lim || (lastLen > 0 && Date.now() - lastT > 5500)) finish(cur.p >= n && cur.miss <= allow);
+        if (el > lim || (lastLen > 0 && Date.now() - lastT > 6000)) finish(good(cur));
       }, 250);
     });
   }
 
   async function runTest(sid, i) {
-    var pr = T.prompts[i], passed = 0, failedAt = -1, d, k, ok;
+    var pr = T.prompts[i], ks = [], j, res, P0;
+    for (j = 1; j <= pr.len; j++) ks.push(pr.k + j);
+    var ch = prepChain(ks); P0 = prep(keyOf(pr.k)).E;
     $("ikNo").textContent = "الاختبار " + AR(i + 1) + " من " + AR(T.prompts.length);
     $("ikSc").textContent = "الصحيح: " + AR(T.score) + " من " + AR(i);
     setBar("ikPg", i / T.prompts.length * 100); setBar("ikTm", 0);
     $("ikAy").className = "ik-ay"; $("ikAy").innerHTML = "";
     setSt("🔊 " + PHRASE + "…");
-    await say(PHRASE); if (dead(sid)) return;
+    await playPhrase(); if (dead(sid)) return;
     setSt("🎧 " + gn("استمع", "استمعي") + " إلى الآية…");
-    var heard = await play(pr.k); if (dead(sid)) return;
-    if (!heard) {   /* تعذّر الصوت: نعرض نص الآية ليستمر الاختبار */
-      setSt("تعذّر تشغيل الصوت، هذه هي الآية:");
-      $("ikAy").className = "ik-ay"; $("ikAy").innerHTML = words(prep(keyOf(pr.k)), 0, true, true);
-      await wait(4500); if (dead(sid)) return;
+    var heardP = await play(pr.k); if (dead(sid)) return;
+    if (!heardP) {   /* تعذّر الصوت: نعرض نص آية السؤال ليستمر الاختبار */
+      var pp = prepChain([pr.k]);
+      setSt("تعذّر تشغيل الصوت. هذه هي الآية:");
+      $("ikAy").innerHTML = renderChain(pp, 0, {}, true, true);
+      await wait(5000); if (dead(sid)) return;
     }
-    for (d = 1; d <= pr.len; d++) {
-      k = pr.k + d;
-      ok = await chance(sid, keyOf(k), pr.len > 1 ? gn("أكمل", "أكملي") + " الآية التي بعدها (" + AR(d) + " من " + AR(pr.len) + ")" : gn("أكمل", "أكملي") + " الآية التي بعدها");
-      if (dead(sid) || T.fatal) return;
-      if (!ok) { failedAt = k; break; }
-      passed++; setSt("✓ أحسنت"); await wait(1100); if (dead(sid)) return;
-    }
-    var pass = passed === pr.len;
-    T.res.push({ k: pr.k, len: pr.len, done: passed, ok: pass });
-    if (pass) { T.score++; setSt("✓ " + gn("أحسنتَ", "أحسنتِ") + "! " + gn("أتممتَ", "أتممتِ") + " الاختبار"); }
+    res = await chance(sid, ch, P0, gn("أكمل", "أكملي") + " الآيات التي بعدها" + (pr.len > 1 ? " (" + AR(pr.len) + " آيات)" : ""));
+    if (dead(sid) || T.fatal) return;
+    var doneAy = ch.ay.filter(function (A) { return A.end <= res.p; }).length;
+    T.res.push({ k: pr.k, len: pr.len, done: res.ok ? pr.len : Math.min(doneAy, pr.len), ok: res.ok });
+    if (res.ok) { T.score++; setSt("✓ " + gn("أحسنتَ", "أحسنتِ") + "! " + gn("أتممتَ", "أتممتِ") + " الاختبار"); }
     else {
-      setSt("✗ هذه هي الآية الصحيحة، " + gn("استمع", "استمعي") + " إليها");
-      await play(failedAt); if (dead(sid)) return;
+      var fj = failAy(ch, res.r), id = identify(res.heard), msg;
+      if (!res.heard.length) msg = "لم أسمع صوتك.";
+      else if (id && ch.keys.indexOf(id.key) < 0) { var pa = id.key.split(":"); msg = "ما " + gn("قرأتَه", "قرأتِه") + " يشبه: سورة " + sName(+pa[0]) + "، الآية " + AR(pa[1]) + "."; }
+      else msg = "توقّفتَ أو أخطأتَ في الآية " + AR(ch.ay[fj].n) + ".";
+      setSt("✗ " + msg + " " + gn("استمع", "استمعي") + " إلى الصحيح");
+      await play(ks[fj]); if (dead(sid)) return;
     }
     $("ikSc").textContent = "الصحيح: " + AR(T.score) + " من " + AR(i + 1);
-    await wait(1500);
+    await wait(1800);
   }
 
   async function runSession() {
@@ -301,7 +374,6 @@
     /* تهيئة الصوت داخل نقرة المستخدم (تشترطه بعض المتصفحات) */
     if (!AU) AU = new Audio();
     try { AU.src = "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA="; var pp = AU.play(); if (pp && pp.catch) pp.catch(function () {}); } catch (e) {}
-    try { if (G.speechSynthesis && G.SpeechSynthesisUtterance) G.speechSynthesis.speak(new G.SpeechSynthesisUtterance("")); } catch (e) {}
     loadText(function (ok) {
       if (!ok) return renderSetup("ملف النص غير موجود: ضع data/quran-text.json.");
       var pr = pick(CFG.n, CFG.c, R);
@@ -315,7 +387,7 @@
   document.addEventListener("click", function (e) {
     var b = e.target.closest && e.target.closest("#t-test button"); if (!b) return;
     if (b.dataset.n) { CFG.n = +b.dataset.n; saveCfg(); [].forEach.call($("ikN").children, function (x) { x.setAttribute("aria-pressed", x === b); }); return; }
-    if (b.dataset.c) { CFG.c = +b.dataset.c; saveCfg(); [].forEach.call($("ikC").children, function (x) { x.setAttribute("aria-pressed", x === b); }); return; }
+    if (b.dataset.c !== undefined) { CFG.c = +b.dataset.c; saveCfg(); [].forEach.call($("ikC").children, function (x) { x.setAttribute("aria-pressed", x === b); }); return; }
     if (b.id === "ikGo" || b.id === "ikAgain") return start();
     if (b.id === "ikBack") return renderSetup();
     if (b.id === "ikSk") { if (CUR) CUR.finish(false); return; }
@@ -325,6 +397,6 @@
   G.Ikhtibar = {
     open: function () { if (!D) D = buildMap(); if (!T) renderSetup(D ? "" : "تعذّر تحميل بيانات المصحف."); },
     leave: function () { if (T) { endSession(); renderSetup(); } },
-    _t: { align: align, prep: prep, pick: pick, buildMap: function () { D = buildMap(); return D; }, memRange: memRange, setText: function (q) { Q = q; }, pageOf: pageOf, keyOf: keyOf }
+    _t: { align: align, prep: prep, prepChain: prepChain, stripLead: stripLead, ayOK: ayOK, identify: identify, setIdx: function () { IDX = null; }, chainLen: chainLen, pick: pick, buildMap: function () { D = buildMap(); return D; }, memRange: memRange, setText: function (q) { Q = q; }, pageOf: pageOf, keyOf: keyOf }
   };
 })(typeof window !== "undefined" ? window : globalThis);
