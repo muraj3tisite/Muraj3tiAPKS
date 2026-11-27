@@ -91,7 +91,7 @@
     }
     return null;
   }
-  var API = { nameOk: nameOk, norm: norm, matchAyah: matchAyah, expectedWords: expectedWords, BSM: BSM, isBsm: isBsm, sim: sim, wsim: wsim };
+  var API = { muqOf: muqOf, nameOk: nameOk, norm: norm, matchAyah: matchAyah, expectedWords: expectedWords, BSM: BSM, isBsm: isBsm, sim: sim, wsim: wsim };
   if (typeof module !== "undefined" && module.exports) { module.exports = API; return; }
   G.Musammi = API;
 
