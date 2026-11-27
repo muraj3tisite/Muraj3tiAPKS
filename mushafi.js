@@ -14,13 +14,21 @@
       view: "عرض الصفحة", full: "كاملة على الشاشة", scroll: "ملء العرض", info: "إظهار رأس الصفحة وتذييلها", awake: "إبقاء الشاشة مضيئة", reset: "إعادة الضبط", done: "تم",
       ph: "ابحث عن كلمة في القرآن…", res: "نتيجة", more: "عرض المزيد", none: "لا توجد نتائج", min: "اكتب حرفين على الأقل", prep: "جارٍ تجهيز البحث…",
       loadFail: "تعذّر تحميل نص القرآن للبحث. تحقق من الاتصال ثم أعد المحاولة.", fontFail: "تعذّر تحميل خط هذه الصفحة. تحقق من الاتصال.", retry: "إعادة المحاولة",
-      surah: "السورة", juzSel: "الجزء", prev: "الصفحة السابقة", next: "الصفحة التالية", slider: "رقم الصفحة", close: "إغلاق" },
+      surah: "السورة", juzSel: "الجزء", prev: "الصفحة السابقة", next: "الصفحة التالية", slider: "رقم الصفحة", close: "إغلاق",
+      auto: "تلقائي", frame: "لون الإطار", size: "حجم الخط", lsp: "تباعد الأسطر", big: "كبير", mid: "متوسط", sml: "صغير", tight: "متقارب", norm: "عادي", loose: "متباعد", none: "بدون",
+      green: "أخضر", gold: "ذهبي", blue: "أزرق", brown: "بني", cream: "ورقي", sand: "بيج", mint: "أخضر فاتح", gray: "رمادي",
+      noteQ: "قرآني: للمراجعة والحفظ والتسميع، بألوان التجويد ومهامك اليومية.", noteM: "مصحفي: للقراءة فقط، صفحة كاملة على الشاشة مع بحث وإعدادات.",
+      kahfSet: "تذكير سورة الكهف كل جمعة", kahfT: "جمعة مباركة", kahfH: "قال ﷺ: «مَنْ قَرَأَ سُورَةَ الْكَهْفِ يَوْمَ الْجُمُعَةِ أَضَاءَ لَهُ مِنَ النُّورِ مَا بَيْنَ الْجُمُعَتَيْنِ»", kahfSrc: "رواه الحاكم والبيهقي وصححه الألباني", kahfGo: "اقرأها الآن", kahfLater: "لاحقًا" },
     en: { seg1: "Quran", seg2: "My Mushaf", back: "Back", search: "Search", settings: "Settings", juz: "Juz", page: "Page", ayah: "Verse",
       title: "Mushaf", sTitle: "Mushaf settings", colors: "Tajweed colours", bg: "Page background", paper: "Paper", white: "White", night: "Night", black: "Black",
       view: "Page view", full: "Whole page", scroll: "Full width", info: "Show page header and footer", awake: "Keep screen on", reset: "Reset", done: "Done",
       ph: "Search a word in the Quran…", res: "results", more: "Show more", none: "No results", min: "Type at least two letters", prep: "Preparing search…",
       loadFail: "Could not load the Quran text for search. Check your connection and try again.", fontFail: "Could not load this page's font. Check your connection.", retry: "Retry",
-      surah: "Surah", juzSel: "Juz", prev: "Previous page", next: "Next page", slider: "Page number", close: "Close" }
+      surah: "Surah", juzSel: "Juz", prev: "Previous page", next: "Next page", slider: "Page number", close: "Close",
+      auto: "Auto", frame: "Frame colour", size: "Text size", lsp: "Line spacing", big: "Large", mid: "Medium", sml: "Small", tight: "Tight", norm: "Normal", loose: "Loose", none: "None",
+      green: "Green", gold: "Gold", blue: "Blue", brown: "Brown", cream: "Cream", sand: "Sand", mint: "Mint", gray: "Gray",
+      noteQ: "Qurani: for review, memorisation and recitation, with tajweed colours and your daily tasks.", noteM: "My Mushaf: for reading only, a full page on screen with search and settings.",
+      kahfSet: "Friday reminder for Surat Al-Kahf", kahfT: "Blessed Friday", kahfH: "The Prophet ﷺ said: whoever reads Surat Al-Kahf on Friday, a light will shine for him between the two Fridays.", kahfSrc: "Narrated by Al-Hakim and Al-Bayhaqi", kahfGo: "Read it now", kahfLater: "Later" }
   };
   var T = EN ? TX.en : TX.ar;
 
@@ -62,9 +70,15 @@
   function surahOfPage(X, pg) { for (var i = 114; i >= 1; i--) if (X.spage[i] <= pg) return i; return 1; }
   function surahName(QV, s) { return QV.NM[s - 1].replace(/^\u0633\u064F\u0648\u0631\u064E\u0629\u064F\s*/, ""); }
 
+  /* الفاتحة وأول صفحة من البقرة: تُحذف الأسطر الفارغة حول المحتوى ليقع في منتصف الشاشة تمامًا */
+  function rowsOf(QV, pg) {
+    var L = QV.L[pg - 1]; if (pg > 2) return L;
+    var a = 0, b = L.length; while (a < b && L[a] === 0) a++; while (b > a && L[b - 1] === 0) b--;
+    return L.slice(a, b);
+  }
   /* صفحة المصحف: أسطرها كما في المطبوع (15 موضعًا: سطر كلمات، أو فراغ، أو لوحة سورة، أو بسملة) */
   function pageHTML(QV, X, pg) {
-    var L = QV.L[pg - 1], id = X.ps[pg - 1], mxw = 0, h = "", i;
+    var L = rowsOf(QV, pg), id = X.ps[pg - 1], mxw = 0, h = "", i;
     L.forEach(function (v) { if (v > mxw) mxw = v; });
     L.forEach(function (v) {
       if (v === 0) { h += '<div class="mq-e"></div>'; return; }
@@ -114,7 +128,7 @@
     return set;
   }
 
-  if (NODE) { module.exports = { norm: norm, makeIndex: makeIndex, pageOfAyah: pageOfAyah, surahOfPage: surahOfPage, surahName: surahName, pageHTML: pageHTML, buildSearch: buildSearch, search: search, hitTokens: hitTokens, juzOf: juzOf, juzStart: juzStart }; return; }
+  if (NODE) { module.exports = { norm: norm, makeIndex: makeIndex, pageOfAyah: pageOfAyah, surahOfPage: surahOfPage, surahName: surahName, pageHTML: pageHTML, rowsOf: rowsOf, buildSearch: buildSearch, search: search, hitTokens: hitTokens, juzOf: juzOf, juzStart: juzStart }; return; }
 
   /* ===== 2) الواجهة ===== */
   var D = document, QV = G.QV4;
@@ -123,23 +137,30 @@
   function el(tag, cls, txt) { var e = D.createElement(tag); if (cls) e.className = cls; if (txt !== undefined) e.textContent = txt; return e; }
   var X = null; function idx() { return X || (X = makeIndex(QV)); }
 
+  /* ألوان الصفحة هي نفسها خيارات «شكل صفحات المصحف» في إعدادات التطبيق، فيتبدّل «قرآني» و«مصحفي» معًا */
   var THEMES = {
-    paper: { bg: "#f6edd6", ink: "#2b2417", bar: "#eadfbf", line: "#d4c394", acc: "#2f7d4a", hl: "rgba(184,146,58,.42)", dark: 0 },
+    cream: { bg: "#f6edd6", ink: "#2b2417", bar: "#eadfbf", line: "#d4c394", acc: "#2f7d4a", hl: "rgba(184,146,58,.42)", dark: 0 },
     white: { bg: "#ffffff", ink: "#111111", bar: "#eef1f6", line: "#d3d9e4", acc: "#1d5fd1", hl: "rgba(255,196,0,.38)", dark: 0 },
-    night: { bg: "#121826", ink: "#e6ebf7", bar: "#1c2438", line: "#2c3752", acc: "#6ea0ff", hl: "rgba(255,200,60,.30)", dark: 1 },
+    sand: { bg: "#f3e6c8", ink: "#2b2417", bar: "#e6d6ac", line: "#cdb985", acc: "#2f7d4a", hl: "rgba(184,146,58,.42)", dark: 0 },
+    mint: { bg: "#e6f2e3", ink: "#14301c", bar: "#d4e6d0", line: "#b4cfae", acc: "#2f7d4a", hl: "rgba(184,146,58,.40)", dark: 0 },
+    gray: { bg: "#e9edf2", ink: "#111827", bar: "#dbe1e9", line: "#c0c9d6", acc: "#1d5fd1", hl: "rgba(255,196,0,.38)", dark: 0 },
+    night: { bg: "#0b1b3a", ink: "#eaf1ff", bar: "#14274d", line: "#27406d", acc: "#6ea0ff", hl: "rgba(255,200,60,.30)", dark: 1 },
     black: { bg: "#000000", ink: "#e9e9e9", bar: "#161616", line: "#2b2b2b", acc: "#7db0ff", hl: "rgba(255,200,60,.30)", dark: 1 }
   };
+  var FRAMES = { green: "#3f9a5f", gold: "#c9a24a", blue: "#4a7fd4", brown: "#a56a2e", none: "transparent" };
+  var SWATCH = { cream: "#f6edd6", white: "#ffffff", sand: "#f3e6c8", mint: "#e6f2e3", gray: "#e9edf2", night: "#0b1b3a", black: "#000000" };
+  function isDark() { var r2 = D.documentElement, t = r2.getAttribute("data-theme"); return t === "dark" || (!t && G.matchMedia && matchMedia("(prefers-color-scheme:dark)").matches); }
+  /* إعدادات الشكل المشتركة مع التطبيق (data-mp / data-mf / data-ms / data-ml) */
+  function pref() { var r = D.documentElement; return { p: r.getAttribute("data-mp") || "", f: r.getAttribute("data-mf") || "", s: r.getAttribute("data-ms") || "", l: r.getAttribute("data-ml") || "" }; }
+  function themeKey() { var p = pref().p; return THEMES[p] ? p : (isDark() ? "night" : "cream"); }
+  function setPref(k, v) { if (G.MPREF) G.MPREF.set(k, v); }
   var TJL = { lazim: "#8f0d24", wajib: "#e0282d", jawaz: "#e56a00", madd2: "#a36b00", ghunna: "#1e8a3c", gray: "#8f8f8f", tafkhim: "#1e3a8a", qalqala: "#1f7fd0" };
   var TJD = { lazim: "#ff6b81", wajib: "#ff5a5f", jawaz: "#ff9a3c", madd2: "#e0b04a", ghunna: "#4fd47a", gray: "#a3a3a3", tafkhim: "#7da2ff", qalqala: "#5db5ff" };
   var PALIDX = { lazim: [3], wajib: [9], jawaz: [4], madd2: [5], ghunna: [6], gray: [1, 2, 15], tafkhim: [7], qalqala: [8] };
 
-  var S = { c: 1, t: "", m: "full", i: 1, w: 0 };
+  var S = { c: 1, m: "full", i: 1, w: 0, k: 1 };
   function loadSet() {
-    try { var r = JSON.parse(localStorage.getItem("mshf_set") || "null"); if (r) { if (r.c === 0 || r.c === 1) S.c = r.c; if (THEMES[r.t]) S.t = r.t; if (r.m === "full" || r.m === "scroll") S.m = r.m; if (r.i === 0 || r.i === 1) S.i = r.i; if (r.w === 0 || r.w === 1) S.w = r.w; } } catch (e) {}
-    if (!S.t) {
-      var r2 = D.documentElement, dk = r2.dataset.theme === "dark" || (!r2.dataset.theme && G.matchMedia && matchMedia("(prefers-color-scheme:dark)").matches);
-      S.t = dk ? "night" : "paper";
-    }
+    try { var r = JSON.parse(localStorage.getItem("mshf_set") || "null"); if (r) { if (r.c === 0 || r.c === 1) S.c = r.c; if (r.m === "full" || r.m === "scroll") S.m = r.m; if (r.i === 0 || r.i === 1) S.i = r.i; if (r.w === 0 || r.w === 1) S.w = r.w; if (r.k === 0 || r.k === 1) S.k = r.k; } } catch (e) {}
   }
   function saveSet() { try { localStorage.setItem("mshf_set", JSON.stringify(S)); } catch (e) {} }
   function lastPage() { try { var p = +localStorage.getItem("mshf_pg"); if (p >= 1 && p <= 604) return p; } catch (e) {} var tp = G.tjState && G.tjState.pg; return tp >= 1 && tp <= 604 ? tp : 1; }
@@ -164,7 +185,7 @@
     ".mq-l.c{justify-content:center;column-gap:.3em}",
     ".mq-pg .aya-t{display:contents}.mq-pg .qw{display:block}",
     ".mq-pg .mq-hlw{background:var(--mq-hl);box-shadow:0 0 0 .11em var(--mq-hl);border-radius:.15em}",
-    ".mq-ban{display:flex;align-items:center;justify-content:center;align-self:center;height:80%;border:2px solid var(--mq-acc);border-radius:.3em;background:linear-gradient(90deg,transparent,var(--mq-hl) 50%,transparent);font-family:'Amiri Quran','Amiri',serif;font-size:.62em;line-height:1}",
+    ".mq-ban{display:flex;align-items:center;justify-content:center;align-self:center;height:80%;border:2px solid var(--mq-fr,var(--mq-acc));border-radius:.3em;background:linear-gradient(90deg,transparent,var(--mq-hl) 50%,transparent);font-family:'Amiri Quran','Amiri',serif;font-size:.62em;line-height:1}",
     ".mq-ban b{font-weight:700;font-family:inherit}",
     ".mq-bsm{display:flex;align-items:center;justify-content:center;font-family:'Amiri Quran','Amiri',serif;font-size:.62em;line-height:1}",
     ".mq-bar{position:absolute;left:0;right:0;z-index:3;background:var(--mq-bar);border:solid var(--mq-line);transition:transform .22s ease,opacity .22s ease}",
@@ -175,8 +196,8 @@
     ".mq-ic:active{background:var(--mq-line)}",
     ".mq-ic svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}",
     ".mq-tt{flex:1;min-width:0;text-align:center;line-height:1.25}.mq-tt b{display:block;font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.mq-tt small{opacity:.75;font-size:12.5px}",
-    ".mq-r1{display:flex;align-items:center;gap:6px}.mq-r1 input[type=range]{flex:1;min-width:0;accent-color:var(--mq-acc);height:32px}",
-    ".mq-r2{display:flex;gap:8px;margin-top:6px}.mq-r2 select{flex:1}",
+    ".mq-r1{display:flex;align-items:center;gap:6px}.mq-r1 select{flex:1}",
+    ".mq-row.col{flex-direction:column;align-items:stretch;gap:8px}.mq-row.col .mq-ths{flex-wrap:wrap}",
     ".mq-sh,.mq-sea{position:absolute;z-index:5;background:var(--mq-bg);color:var(--mq-ink)}",
     ".mq-sh{left:0;right:0;bottom:0;border-top:1px solid var(--mq-line);border-radius:18px 18px 0 0;padding:14px 16px calc(env(safe-area-inset-bottom,0px) + 16px);box-shadow:0 -10px 30px rgba(0,0,0,.25);max-height:80%;overflow-y:auto;display:none}",
     ".mq-sh.on{display:block}",
@@ -202,7 +223,14 @@
     ".mq-rt{font-family:'Amiri Quran','Amiri','Noto Naskh Arabic',serif;font-size:20px;line-height:2;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}",
     ".mq-rt mark{background:var(--mq-hl);color:inherit;border-radius:4px;padding:0 2px}",
     ".mq-msg{padding:24px 16px;text-align:center;opacity:.85;line-height:1.8}",
-    ".mq-more{display:block;margin:6px auto 0;padding:10px 18px!important;border:1px solid var(--mq-line)!important}"
+    ".mq-more{display:block;margin:6px auto 0;padding:10px 18px!important;border:1px solid var(--mq-line)!important}",
+    ".mq-note{margin:0 0 12px;font-size:12.5px;line-height:1.7;color:var(--mut);opacity:.9}",
+    ".mq-kh{position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 10px);transform:translate(-50%,-150%);width:min(480px,calc(100% - 20px));box-sizing:border-box;z-index:210;background:var(--card);color:var(--ink);border:2px solid var(--acc);border-radius:18px;padding:12px 14px;box-shadow:0 10px 30px rgba(0,0,0,.3);transition:transform .5s cubic-bezier(.22,1.25,.36,1),opacity .3s;opacity:0;font-family:Cairo,Tahoma,sans-serif}",
+    ".mq-kh.on{transform:translate(-50%,0);opacity:1}.mq-kh b{display:block;font-size:15px;margin-bottom:2px}",
+    ".mq-kh p{margin:0;font-size:14px;line-height:1.9}.mq-kh small{display:block;margin-top:2px;font-size:12px;color:var(--mut)}",
+    ".mq-kh .kb{display:flex;gap:8px;margin-top:10px}.mq-kh .kb button{flex:1;padding:9px 10px;border:1px solid var(--line);border-radius:12px;font:inherit;font-weight:600;background:var(--card);color:var(--ink);cursor:pointer}",
+    ".mq-kh .kb button.p{background:var(--acc);border-color:var(--acc);color:#fff}",
+    "@media(prefers-reduced-motion:reduce){.mq-kh{transition:none}}"
   ].join("\n");
 
   var ICON = {
@@ -213,7 +241,7 @@
     next: '<svg viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg>'
   };
 
-  var ov, stage, bodyEl, pageEl, tTitle, tSub, mJuz, mSur, mNum, rng, selS, selJ, shEl, seaEl, seaIn, seaCnt, seaLst, palEl;
+  var ov, stage, bodyEl, pageEl, tTitle, tSub, mJuz, mSur, mNum, selS, selJ, shEl, seaEl, seaIn, seaCnt, seaLst, palEl;
   var on = false, cur = 1, req = 0, hlKey = null, wl = null, built = false, closing = false;
 
   function css() { var s = el("style"); s.id = "mqCss"; s.textContent = CSS; D.head.appendChild(s); }
@@ -230,9 +258,8 @@
       '<button type="button" class="mq-ic" id="mqSb" aria-label="' + T.search + '">' + ICON.search + '</button>' +
       '<button type="button" class="mq-ic" id="mqGb" aria-label="' + T.settings + '">' + ICON.set + '</button></div>';
     h += '<div class="mq-bar mq-bot" id="mqBot"><div class="mq-r1"><button type="button" class="mq-ic" id="mqPv" aria-label="' + T.prev + '">' + ICON.prev + '</button>' +
-      '<input type="range" id="mqRg" min="1" max="604" step="1" value="1" dir="rtl" aria-label="' + T.slider + '">' +
-      '<button type="button" class="mq-ic" id="mqNx" aria-label="' + T.next + '">' + ICON.next + '</button></div>' +
-      '<div class="mq-r2"><select id="mqSs" aria-label="' + T.surah + '"></select><select id="mqSj" aria-label="' + T.juzSel + '"></select></div></div>';
+      '<select id="mqSs" aria-label="' + T.surah + '"></select><select id="mqSj" aria-label="' + T.juzSel + '"></select>' +
+      '<button type="button" class="mq-ic" id="mqNx" aria-label="' + T.next + '">' + ICON.next + '</button></div></div>';
     h += '<div class="mq-sh" id="mqSh" role="dialog" aria-label="' + T.sTitle + '"></div>';
     h += '<div class="mq-sea" id="mqSea"><div class="mq-sh0"><button type="button" class="mq-ic" id="mqSx" aria-label="' + T.close + '">' + ICON.x + '</button>' +
       '<input type="search" id="mqSi" dir="rtl" placeholder="' + T.ph + '" enterkeyhint="search" autocomplete="off" autocapitalize="off" spellcheck="false"></div>' +
@@ -240,7 +267,7 @@
     ov.innerHTML = h; D.body.appendChild(ov);
 
     stage = g("mqSt"); bodyEl = g("mqBd"); pageEl = g("mqPg"); tTitle = g("mqTt"); tSub = g("mqTs"); mJuz = g("mqJuz"); mSur = g("mqSurH"); mNum = g("mqNum");
-    rng = g("mqRg"); selS = g("mqSs"); selJ = g("mqSj"); shEl = g("mqSh"); seaEl = g("mqSea"); seaIn = g("mqSi"); seaCnt = g("mqCn"); seaLst = g("mqLs");
+    selS = g("mqSs"); selJ = g("mqSj"); shEl = g("mqSh"); seaEl = g("mqSea"); seaIn = g("mqSi"); seaCnt = g("mqCn"); seaLst = g("mqLs");
     palEl = el("style"); palEl.id = "mqPal"; D.head.appendChild(palEl);
 
     var i, o;
@@ -251,46 +278,62 @@
     try { new ResizeObserver(function () { clearTimeout(build.rt); build.rt = setTimeout(fit, 60); }).observe(bodyEl); } catch (e) {}
   }
 
+  function segH(id, items) { return '<div class="mq-sg" id="' + id + '">' + items.map(function (o) { return '<button type="button" data-v="' + o[0] + '">' + o[1] + '</button>'; }).join("") + '</div>'; }
   function buildSettings() {
     var h = '<h3>' + T.sTitle + '</h3>' +
       '<div class="mq-row"><span class="mq-lb">' + T.colors + '</span><button type="button" class="mq-sw" id="mqC" role="switch" aria-checked="true"></button></div>' +
-      '<div class="mq-row"><span class="mq-lb">' + T.bg + '</span><div class="mq-ths" id="mqTh"></div></div>' +
+      '<div class="mq-row col"><span class="mq-lb">' + T.bg + '</span><div class="mq-ths" id="mqTh"></div></div>' +
+      '<div class="mq-row col"><span class="mq-lb">' + T.frame + '</span><div class="mq-ths" id="mqFr"></div></div>' +
+      '<div class="mq-row"><span class="mq-lb">' + T.size + '</span>' + segH("mqSz", [["", T.big], ["md", T.mid], ["sm", T.sml]]) + '</div>' +
+      '<div class="mq-row"><span class="mq-lb">' + T.lsp + '</span>' + segH("mqLs2", [["tight", T.tight], ["", T.norm], ["loose", T.loose]]) + '</div>' +
       '<div class="mq-row"><span class="mq-lb">' + T.view + '</span><div class="mq-sg" id="mqVw"><button type="button" data-m="full">' + T.full + '</button><button type="button" data-m="scroll">' + T.scroll + '</button></div></div>' +
       '<div class="mq-row"><span class="mq-lb">' + T.info + '</span><button type="button" class="mq-sw" id="mqI" role="switch" aria-checked="true"></button></div>' +
       '<div class="mq-row"><span class="mq-lb">' + T.awake + '</span><button type="button" class="mq-sw" id="mqW" role="switch" aria-checked="false"></button></div>' +
+      '<div class="mq-row"><span class="mq-lb">' + T.kahfSet + '</span><button type="button" class="mq-sw" id="mqK" role="switch" aria-checked="true"></button></div>' +
       '<div class="mq-ft"><button type="button" id="mqRs">' + T.reset + '</button><button type="button" class="p" id="mqDn">' + T.done + '</button></div>';
     shEl.innerHTML = h;
-    var ths = g("mqTh");
-    ["paper", "white", "night", "black"].forEach(function (k) {
-      var b = el("button", "mq-th"); b.type = "button"; b.dataset.t = k; b.setAttribute("aria-pressed", "false");
-      var sw = el("i"); sw.style.background = THEMES[k].bg; b.appendChild(sw); b.appendChild(el("span", "", T[k])); ths.appendChild(b);
+    var ths = g("mqTh"), frs = g("mqFr");
+    [""].concat(Object.keys(THEMES)).forEach(function (k) {
+      var b = el("button", "mq-th"); b.type = "button"; b.dataset.v = k; b.setAttribute("aria-pressed", "false");
+      var sw = el("i"); sw.style.background = k ? SWATCH[k] : "linear-gradient(135deg,#f6edd6 50%,#0b1b3a 50%)"; b.appendChild(sw); b.appendChild(el("span", "", k ? T[k] || k : T.auto)); ths.appendChild(b);
+    });
+    [""].concat(Object.keys(FRAMES)).forEach(function (k) {
+      var b = el("button", "mq-th"); b.type = "button"; b.dataset.v = k; b.setAttribute("aria-pressed", "false");
+      var sw = el("i"); sw.style.background = "var(--mq-bg)"; sw.style.border = "4px solid " + (k ? FRAMES[k] : "var(--mq-acc)"); b.appendChild(sw); b.appendChild(el("span", "", k ? T[k] : T.auto)); frs.appendChild(b);
     });
     g("mqC").addEventListener("click", function () { S.c = S.c ? 0 : 1; applySet(); saveSet(); render(cur, true); });
     g("mqI").addEventListener("click", function () { S.i = S.i ? 0 : 1; applySet(); saveSet(); fit(); });
     g("mqW").addEventListener("click", function () { S.w = S.w ? 0 : 1; applySet(); saveSet(); wake(!!S.w); });
-    ths.addEventListener("click", function (e) { var b = e.target.closest("button"); if (!b) return; S.t = b.dataset.t; applySet(); saveSet(); render(cur, true); });
+    g("mqK").addEventListener("click", function () { S.k = S.k ? 0 : 1; applySet(); saveSet(); if (S.k) kahfAsk(); });
+    ths.addEventListener("click", function (e) { var b = e.target.closest("button"); if (b) setPref("p", b.dataset.v); });
+    frs.addEventListener("click", function (e) { var b = e.target.closest("button"); if (b) setPref("f", b.dataset.v); });
+    g("mqSz").addEventListener("click", function (e) { var b = e.target.closest("button"); if (b) setPref("s", b.dataset.v); });
+    g("mqLs2").addEventListener("click", function (e) { var b = e.target.closest("button"); if (b) setPref("l", b.dataset.v); });
     g("mqVw").addEventListener("click", function (e) { var b = e.target.closest("button"); if (!b) return; S.m = b.dataset.m; applySet(); saveSet(); fit(); });
-    g("mqRs").addEventListener("click", function () { S.c = 1; S.m = "full"; S.i = 1; S.w = 0; S.t = ""; loadSetDefaults(); applySet(); saveSet(); wake(false); render(cur, true); });
+    g("mqRs").addEventListener("click", function () { S.c = 1; S.m = "full"; S.i = 1; S.w = 0; S.k = 1; if (G.MPREF) G.MPREF.reset(); applySet(); saveSet(); wake(false); render(cur, true); });
     g("mqDn").addEventListener("click", function () { closePanels(); });
   }
-  function loadSetDefaults() { var r2 = D.documentElement, dk = r2.dataset.theme === "dark" || (!r2.dataset.theme && G.matchMedia && matchMedia("(prefers-color-scheme:dark)").matches); S.t = dk ? "night" : "paper"; }
-
   function applySet() {
-    var th = THEMES[S.t];
+    var th = THEMES[themeKey()], pf = pref();
     ov.style.setProperty("--mq-bg", th.bg); ov.style.setProperty("--mq-ink", th.ink); ov.style.setProperty("--mq-bar", th.bar);
     ov.style.setProperty("--mq-line", th.line); ov.style.setProperty("--mq-acc", th.acc); ov.style.setProperty("--mq-hl", th.hl);
+    ov.style.setProperty("--mq-fr", FRAMES[pf.f] || th.acc);
     ov.style.colorScheme = th.dark ? "dark" : "light";
     g("mqC").setAttribute("aria-checked", S.c ? "true" : "false");
     g("mqI").setAttribute("aria-checked", S.i ? "true" : "false");
     g("mqW").setAttribute("aria-checked", S.w ? "true" : "false");
-    [].forEach.call(g("mqTh").children, function (b) { b.setAttribute("aria-pressed", b.dataset.t === S.t ? "true" : "false"); });
+    g("mqK").setAttribute("aria-checked", S.k ? "true" : "false");
+    [].forEach.call(g("mqTh").children, function (b) { b.setAttribute("aria-pressed", b.dataset.v === pf.p ? "true" : "false"); });
+    [].forEach.call(g("mqFr").children, function (b) { b.setAttribute("aria-pressed", b.dataset.v === pf.f ? "true" : "false"); });
+    [].forEach.call(g("mqSz").children, function (b) { b.setAttribute("aria-pressed", b.dataset.v === pf.s ? "true" : "false"); });
+    [].forEach.call(g("mqLs2").children, function (b) { b.setAttribute("aria-pressed", b.dataset.v === pf.l ? "true" : "false"); });
     [].forEach.call(g("mqVw").children, function (b) { b.setAttribute("aria-pressed", b.dataset.m === S.m ? "true" : "false"); });
     g("mqMt").style.display = S.i ? "" : "none"; g("mqMb").style.display = S.i ? "" : "none";
     bodyEl.classList.toggle("sc", S.m === "scroll");
   }
 
   function palette(pg) {
-    var th = THEMES[S.t], cols = th.dark ? TJD : TJL, map = { 0: th.ink }, r, oc = [], i;
+    var th = THEMES[themeKey()], cols = th.dark ? TJD : TJL, map = { 0: th.ink }, r, oc = [], i;
     for (r in PALIDX) PALIDX[r].forEach(function (ix) { map[ix] = S.c ? cols[r] : th.ink; });
     for (i in map) oc.push(i + " " + map[i]);
     palEl.textContent = "@font-palette-values --mshf{font-family:QPC" + pg + ";base-palette:0;override-colors:" + oc.join(",") + "}";
@@ -331,7 +374,7 @@
     tTitle.textContent = (EN ? T.surah + " " : "سورة ") + nm;
     tSub.textContent = T.juz + " " + num(juzOf(pg)) + " · " + T.page + " " + num(pg);
     mJuz.textContent = T.juz + " " + num(juzOf(pg)); mSur.textContent = (EN ? T.surah + " " : "سورة ") + nm; mNum.textContent = num(pg);
-    rng.value = pg; selS.value = s; selJ.value = juzOf(pg);
+    selS.value = s; selJ.value = juzOf(pg);
   }
   function render(pg, keep) {
     palette(pg);
@@ -345,9 +388,10 @@
   }
   function fit() {
     if (!on || !pageEl.firstChild || !pageEl.querySelector(".mq-l")) return;
-    var W = bodyEl.clientWidth - 16, H = bodyEl.clientHeight - 6;
+    var pf = pref(), sc = pf.s === "md" ? .86 : (pf.s === "sm" ? .72 : 1), lf = pf.l === "tight" ? .87 : (pf.l === "loose" ? 1.18 : 1);
+    var W = (bodyEl.clientWidth - 16) * sc, H = bodyEl.clientHeight - 6;
     if (W <= 0 || H <= 0) return;
-    var rows = QV.L[cur - 1].length, mx = 0;
+    var rows = rowsOf(QV, cur).length, mx = 0;
     pageEl.style.width = W + "px"; pageEl.style.fontSize = "40px"; pageEl.style.height = "auto"; pageEl.style.gridTemplateRows = "";
     [].forEach.call(pageEl.querySelectorAll(".mq-l"), function (l) {
       var w = 0, n = 0; [].forEach.call(l.querySelectorAll(".qw"), function (x) { w += x.getBoundingClientRect().width; n++; });
@@ -355,8 +399,13 @@
     });
     if (!mx) return;
     var fsW = 40 * W / mx, fs, rowH;
-    if (S.m === "full") { fs = Math.min(fsW, (H / rows) / 1.62, 70); rowH = Math.min(H / rows, fs * 2.15); }
-    else { fs = Math.min(fsW, 70); rowH = fs * 1.95; }
+    var need = false;
+    if (S.m === "full") {
+      fs = Math.min(fsW, (H / rows) / 1.62, 70);
+      if (lf > 1 && cur > 2) { rowH = fs * 2.15 * lf; need = rowH * rows > H + 1; }   /* التباعد الواسع يتجاوز الشاشة فتصير الصفحة قابلة للتمرير */
+      else rowH = Math.min(H / rows, fs * 2.15 * Math.min(lf, 1));
+    } else { fs = Math.min(fsW, 70); rowH = fs * 1.95 * lf; }
+    bodyEl.classList.toggle("sc", S.m === "scroll" || need);
     pageEl.style.fontSize = fs.toFixed(2) + "px";
     pageEl.style.width = Math.min(W, mx * fs / 40).toFixed(1) + "px";
     pageEl.style.gridTemplateRows = "repeat(" + rows + "," + rowH.toFixed(1) + "px)";
@@ -390,8 +439,6 @@
     g("mqX").addEventListener("click", function () { close(); });
     g("mqPv").addEventListener("click", function () { flip(-1); });
     g("mqNx").addEventListener("click", function () { flip(1); });
-    rng.addEventListener("input", function () { meta(+rng.value); });
-    rng.addEventListener("change", function () { go(+rng.value); });
     selS.addEventListener("change", function () { go(idx().spage[+selS.value]); });
     selJ.addEventListener("change", function () { go(juzStart(+selJ.value)); });
     g("mqGb").addEventListener("click", function () { seaEl.classList.remove("on"); shEl.classList.toggle("on"); bars(true); });
@@ -464,12 +511,12 @@
   }
 
   /* ===== فتح الشاشة وإغلاقها ===== */
-  function open() {
+  function open(pg) {
     build(); if (on) return;
     loadSet(); applySet();
     on = true; ov.classList.add("on"); D.body.classList.add("mq-open");
     try { history.pushState({ mshf: 1 }, ""); } catch (e) {}
-    closePanels(); go(lastPage()); bars(true, 2800); if (S.w) wake(true);
+    closePanels(); go(pg >= 1 && pg <= 604 ? pg : lastPage()); bars(true, 2800); if (S.w) wake(true);
   }
   function close(fromPop) {
     if (!on) return; on = false; req++; clearTimeout(barTm);
@@ -479,14 +526,20 @@
   }
 
   /* ===== خيارا الخانة: قرآني | مصحفي ===== */
-  var seg = null;
-  function segSet(v) { if (!seg) return; [].forEach.call(seg.children, function (b) { b.setAttribute("aria-pressed", b.dataset.v === v ? "true" : "false"); }); }
+  var seg = null, noteEl = null;
+  function segSet(v) {
+    if (!seg) return;
+    [].forEach.call(seg.children, function (b) { b.setAttribute("aria-pressed", b.dataset.v === v ? "true" : "false"); });
+    if (noteEl) noteEl.textContent = v === "m" ? T.noteM : T.noteQ;
+  }
   function initSeg() {
     var sec = g("t-qurani"); if (!sec || g("mqSeg")) return;
     seg = el("div", "seg mq-seg"); seg.id = "mqSeg"; seg.setAttribute("role", "group");
-    var a = el("button", "", "قرآني"), b = el("button", "", "مصحفي");
+    var a = el("button", "", T.seg1), b = el("button", "", T.seg2);
     a.type = "button"; b.type = "button"; a.dataset.v = "q"; b.dataset.v = "m";
-    seg.appendChild(a); seg.appendChild(b); sec.insertBefore(seg, sec.firstChild); segSet("q");
+    seg.appendChild(a); seg.appendChild(b);
+    noteEl = el("p", "mq-note"); noteEl.id = "mqNote";
+    sec.insertBefore(noteEl, sec.firstChild); sec.insertBefore(seg, sec.firstChild); segSet("q");
     seg.addEventListener("click", function (e) { var t = e.target.closest("button"); if (!t) return; if (t.dataset.v === "m") { segSet("m"); open(); } else segSet("q"); });
   }
 
@@ -496,6 +549,64 @@
   D.addEventListener("input", function (e) {
     if (e.target && e.target.id === "mqSi") { clearTimeout(sTm); sTm = setTimeout(runSearch, 220); }
   });
-  initSeg();
+
+  /* ===== تذكير سورة الكهف كل جمعة =====
+     بطاقة هادئة تظهر مرة واحدة فقط في اليوم عند فتح التطبيق يوم الجمعة، ولا تظهر أثناء الترحيب أو تسجيل الدخول.
+     وإن سمح المستخدم بالإشعارات يُرسَل إشعار نظام أيضًا (وتُسجَّل مزامنة دورية في المتصفحات التي تدعمها). */
+  function ymd(d) { return d.getFullYear() + "-" + (d.getMonth() + 1) + "-" + d.getDate(); }
+  function kahfSeen() { try { return localStorage.getItem("mshf_kahf") || ""; } catch (e) { return ""; } }
+  function kahfMark() { try { localStorage.setItem("mshf_kahf", ymd(new Date())); } catch (e) {} }
+  function kahfAsk() {
+    try { if ("Notification" in G && Notification.permission === "default") Notification.requestPermission().then(kahfPeriodic, function () {}); else kahfPeriodic(); } catch (e) {}
+  }
+  function kahfPeriodic() {
+    try {
+      if (!(navigator.serviceWorker && "Notification" in G && Notification.permission === "granted")) return;
+      navigator.serviceWorker.ready.then(function (reg) { if (reg.periodicSync && reg.periodicSync.register) reg.periodicSync.register("kahf-friday", { minInterval: 12 * 3600 * 1000 }).catch(function () {}); });
+    } catch (e) {}
+  }
+  function kahfBlocked() {
+    var onb = g("onb"); if (onb && !onb.classList.contains("hide")) return true;
+    var mw = g("mainWrap"); if (mw && mw.classList.contains("hide")) return true;
+    if (g("rbAsk") || on) return true;
+    return false;
+  }
+  var kahfEl = null;
+  function kahfHide() { if (!kahfEl) return; var n = kahfEl; kahfEl = null; n.classList.remove("on"); setTimeout(function () { n.remove(); }, 600); }
+  function kahfShow() {
+    if (kahfEl) return;
+    var n = el("div", "mq-kh"); n.setAttribute("role", "status");
+    n.innerHTML = "<b>" + T.kahfT + "</b><p>" + T.kahfH + "</p><small>" + T.kahfSrc + '</small><div class="kb"><button type="button" class="p" data-a="go">' + T.kahfGo + '</button><button type="button" data-a="no">' + T.kahfLater + "</button></div>";
+    D.body.appendChild(n); kahfEl = n; kahfMark();
+    requestAnimationFrame(function () { requestAnimationFrame(function () { if (kahfEl === n) n.classList.add("on"); }); });
+    n.addEventListener("click", function (e) {
+      var b = e.target.closest("button"); if (!b) return;
+      if (b.dataset.a === "go") { kahfHide(); try { segSet("m"); } catch (x) {} open(idx().spage[18]); } else kahfHide();
+    });
+    setTimeout(function () { if (kahfEl === n) kahfHide(); }, 20000);
+  }
+  function kahfSys() {
+    try {
+      if (!("Notification" in G) || Notification.permission !== "granted" || !navigator.serviceWorker) return;
+      navigator.serviceWorker.ready.then(function (reg) { reg.showNotification(T.kahfT, { body: T.kahfH + "\n" + T.kahfSrc, tag: "kahf-friday", icon: "img/icon-192.png", data: { url: "./#kahf" } }); });
+    } catch (e) {}
+  }
+  function kahfCheck() {
+    loadSet();
+    if (!S.k || new Date().getDay() !== 5 || kahfSeen() === ymd(new Date())) return;
+    if (kahfBlocked()) return;
+    kahfShow(); kahfSys();
+  }
+  function kahfInit() {
+    setTimeout(kahfCheck, 3500);
+    D.addEventListener("visibilitychange", function () { if (D.visibilityState === "visible") setTimeout(kahfCheck, 1200); });
+    if (/#kahf/.test(location.hash)) setTimeout(function () { try { segSet("m"); } catch (x) {} open(idx().spage[18]); try { history.replaceState(null, "", location.pathname + location.search); } catch (e) {} }, 900);
+    try { navigator.serviceWorker && navigator.serviceWorker.addEventListener("message", function (e) { if (e.data && e.data.type === "OPEN_KAHF") { try { segSet("m"); } catch (x) {} open(idx().spage[18]); } }); } catch (e) {}
+    kahfPeriodic();
+  }
+
+  initSeg(); kahfInit();
+  /* عند تغيير «شكل صفحات المصحف» (من الإعدادات أو من هنا) يُعاد رسم الصفحة فورًا */
+  D.addEventListener("mpref", function () { if (!built) return; applySet(); if (on) render(cur, true); });
   G.Mushafi = { open: open, close: close, goto: function (p) { build(); go(p); } };
 })(typeof window !== "undefined" ? window : this);

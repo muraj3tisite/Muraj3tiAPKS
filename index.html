@@ -113,7 +113,7 @@ ol,ul{padding-inline-start:22px}
 @media(prefers-reduced-motion:reduce){#slide.in{animation:none}}
 
 /* ===== قرآني: المصحف الملون ===== */
-:root{--tj-lazim:#8f0d24;--tj-wajib:#e0282d;--tj-jawaz:#e56a00;--tj-madd2:#a36b00;--tj-ghunna:#1e8a3c;--tj-gray:#8f8f8f;--tj-tafkhim:#1e3a8a;--tj-qalqala:#1f7fd0;--pg:#fffdf6;--pgline:#2f7d4a;--gold:#b8923a;--mk-fill:#fffdf3;--mk-ink:#14451f}
+:root{--tj-lazim:#8f0d24;--tj-wajib:#e0282d;--tj-jawaz:#e56a00;--tj-madd2:#a36b00;--tj-ghunna:#1e8a3c;--tj-gray:#8f8f8f;--tj-tafkhim:#1e3a8a;--tj-qalqala:#1f7fd0;--pg:#f6edd6;--pgline:#2f7d4a;--gold:#b8923a;--mk-fill:#fffdf3;--mk-ink:#14451f}
 @media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--tj-lazim:#ff4d6d;--tj-wajib:#ff7a45;--tj-jawaz:#ffa31a;--tj-madd2:#ffd84d;--tj-ghunna:#55e07a;--tj-gray:#8e97a8;--tj-tafkhim:#8fb0ff;--tj-qalqala:#5cc4ff;--pg:#0b1b3a;--pgline:#3f8f5e;--gold:#d3b15d;--mk-fill:#12301f;--mk-ink:#d7f5df}}
 :root[data-theme="dark"]{--tj-lazim:#ff4d6d;--tj-wajib:#ff7a45;--tj-jawaz:#ffa31a;--tj-madd2:#ffd84d;--tj-ghunna:#55e07a;--tj-gray:#8e97a8;--tj-tafkhim:#8fb0ff;--tj-qalqala:#5cc4ff;--pg:#0b1b3a;--pgline:#3f8f5e;--gold:#d3b15d;--mk-fill:#12301f;--mk-ink:#d7f5df}
 
@@ -371,7 +371,7 @@ main:has(#t-qurani:not(.hide)){max-width:900px;padding-left:4px;padding-right:4p
 .tj-fin.hide,.tj-fin.off{display:none}.fin-ok{display:flex;align-items:center;gap:8px}
 
 /* ===== خيارات شكل صفحات المصحف (من الإعدادات) ===== */
-html[data-mp="cream"] :is(.mushaf-sheet,.mp-prev){--pg:#fffdf6;--tj-lazim:#8f0d24;--tj-wajib:#e0282d;--tj-jawaz:#e56a00;--tj-madd2:#a36b00;--tj-ghunna:#1e8a3c;--tj-gray:#8f8f8f;--tj-tafkhim:#1e3a8a;--tj-qalqala:#1f7fd0;--pink:#0b1a33;--pmut:#5a6b85;--mk-fill:#fffdf3;--mk-ink:#14451f;--gold:#b8923a;}
+html[data-mp="cream"] :is(.mushaf-sheet,.mp-prev){--pg:#f6edd6;--tj-lazim:#8f0d24;--tj-wajib:#e0282d;--tj-jawaz:#e56a00;--tj-madd2:#a36b00;--tj-ghunna:#1e8a3c;--tj-gray:#8f8f8f;--tj-tafkhim:#1e3a8a;--tj-qalqala:#1f7fd0;--pink:#0b1a33;--pmut:#5a6b85;--mk-fill:#fffdf3;--mk-ink:#14451f;--gold:#b8923a;}
 html[data-mp="white"] :is(.mushaf-sheet,.mp-prev){--pg:#ffffff;--tj-lazim:#8f0d24;--tj-wajib:#e0282d;--tj-jawaz:#e56a00;--tj-madd2:#a36b00;--tj-ghunna:#1e8a3c;--tj-gray:#8f8f8f;--tj-tafkhim:#1e3a8a;--tj-qalqala:#1f7fd0;--pink:#0b1a33;--pmut:#5a6b85;--mk-fill:#fffdf3;--mk-ink:#14451f;--gold:#b8923a;}
 html[data-mp="sand"] :is(.mushaf-sheet,.mp-prev){--pg:#f3e6c8;--tj-lazim:#8f0d24;--tj-wajib:#e0282d;--tj-jawaz:#e56a00;--tj-madd2:#a36b00;--tj-ghunna:#1e8a3c;--tj-gray:#8f8f8f;--tj-tafkhim:#1e3a8a;--tj-qalqala:#1f7fd0;--pink:#0b1a33;--pmut:#5a6b85;--mk-fill:#fffdf3;--mk-ink:#14451f;--gold:#b8923a;}
 html[data-mp="mint"] :is(.mushaf-sheet,.mp-prev){--pg:#e6f2e3;--tj-lazim:#8f0d24;--tj-wajib:#e0282d;--tj-jawaz:#e56a00;--tj-madd2:#a36b00;--tj-ghunna:#1e8a3c;--tj-gray:#8f8f8f;--tj-tafkhim:#1e3a8a;--tj-qalqala:#1f7fd0;--pink:#0b1a33;--pmut:#5a6b85;--mk-fill:#fffdf3;--mk-ink:#14451f;--gold:#b8923a;}
@@ -388,6 +388,19 @@ html[data-ms="md"] .mushaf-text{padding-inline:7%}
 html[data-ms="sm"] .mushaf-text{padding-inline:14%}
 html[data-ml="tight"] .mushaf-text .qline{height:1.7em}
 html[data-ml="loose"] .mushaf-text .qline{height:2.3em}
+
+/* قرآني بشكل مصحفي: صفحة بلا إطار ثقيل، رأس وتذييل خفيفان، وأدوات بسيطة. كل الخيارات (لون الصفحة والإطار والحجم والتباعد) تعمل من الإعدادات */
+#t-qurani>.card{background:transparent;border:0;box-shadow:none}
+#t-qurani .mushaf-sheet{border:0;border-radius:14px;padding:0}
+#t-qurani .mushaf-frame{border:1.5px solid var(--pgline);border-radius:12px;box-shadow:none;padding:6px 3px 8px}
+#t-qurani .mushaf-head{margin:0 0 2px;padding:0 8px;font:600 12.5px/1.8 Cairo,Tahoma,sans-serif;opacity:.78}
+#t-qurani .mushaf-head span{border:0;background:transparent;padding:0}
+#t-qurani .mushaf-foot{font:600 13px/1.6 Cairo,Tahoma,sans-serif;opacity:.78}
+#t-qurani .tj-nav select,#t-qurani .tj-nav button,#t-qurani #tjHideAya{border-radius:12px}
+#t-qurani .tj-bar{margin-bottom:8px}
+#t-qurani h2{font-size:17px}
+/* الفاتحة وأول صفحة من البقرة في منتصف الشاشة تمامًا (أفقيًا ورأسيًا) */
+.mushaf-text.q-mid{min-height:min(68vh,560px);display:flex;flex-direction:column;justify-content:center}
 .mp-grid{display:flex;flex-wrap:wrap;gap:8px}
 .mp-sw{display:flex;flex-direction:column;align-items:center;gap:4px;padding:6px 4px;flex:1 1 62px;min-width:62px;font-size:12px;line-height:1.5}
 .mp-sw i{display:block;width:32px;height:32px;border-radius:50%;border:2px solid var(--line)}
@@ -1063,6 +1076,7 @@ function tjFont(pg,cb){
 }
 function tjRenderPage(pg,dir){
  var X=qIndex(),sIdx=surahOf(pg),h="",id=X.ps[pg-1],L=QV.L[pg-1],mxw=0,i,ln;
+ if(pg<3){var a0=0,b0=L.length;while(a0<b0&&L[a0]===0)a0++;while(b0>a0&&L[b0-1]===0)b0--;L=L.slice(a0,b0)}
  tjState.pg=pg;
  $("tjPageSel").value=String(pg);$("tjSurahSel").value=String(sIdx);
  $("tjMetaPage").textContent="صفحة "+AR(pg);$("tjMetaSurah").textContent="سورة "+SN[sIdx];
@@ -1082,7 +1096,7 @@ function tjRenderPage(pg,dir){
   if(cur!==-1)row+="</span>";
   h+='<div class="qline'+(center?" c":"")+'">'+row+"</div>";id=end;
  });
- var box=$("mushafText");box.style.setProperty("--qf","QPC"+pg);box.innerHTML=h;
+ var box=$("mushafText");box.style.setProperty("--qf","QPC"+pg);box.innerHTML=h;box.classList.toggle("q-mid",pg<3);
  var fr=$("mushafFrame");fr.classList.remove("tj-in-next","tj-in-prev");
  if(dir){void fr.offsetWidth;fr.classList.add(dir>0?"tj-in-next":"tj-in-prev")}
  tjApplyView();qFit();
@@ -1458,7 +1472,7 @@ function apply(re){
 function save(){try{localStorage.setItem(KEY,JSON.stringify(P))}catch(e){}}
 apply(false);
 var L=function(a,e){return EN?e:a};
-var PP=[['',L('تلقائي','Auto'),'linear-gradient(135deg,#fffdf6 50%,#0b1b3a 50%)'],['cream',L('ورقي','Cream'),'#fffdf6'],['white',L('أبيض','White'),'#ffffff'],['sand',L('بيج','Sand'),'#f3e6c8'],['mint',L('أخضر فاتح','Mint'),'#e6f2e3'],['gray',L('رمادي','Gray'),'#e9edf2'],['night',L('ليلي','Night'),'#0b1b3a'],['black',L('أسود','Black'),'#000000']];
+var PP=[['',L('تلقائي','Auto'),'linear-gradient(135deg,#f6edd6 50%,#0b1b3a 50%)'],['cream',L('ورقي','Cream'),'#f6edd6'],['white',L('أبيض','White'),'#ffffff'],['sand',L('بيج','Sand'),'#f3e6c8'],['mint',L('أخضر فاتح','Mint'),'#e6f2e3'],['gray',L('رمادي','Gray'),'#e9edf2'],['night',L('ليلي','Night'),'#0b1b3a'],['black',L('أسود','Black'),'#000000']];
 var FF=[['',L('تلقائي','Auto'),'#2f7d4a'],['green',L('أخضر','Green'),'#3f9a5f'],['gold',L('ذهبي','Gold'),'#c9a24a'],['blue',L('أزرق','Blue'),'#4a7fd4'],['brown',L('بني','Brown'),'#a56a2e'],['none',L('بدون','None'),'transparent']];
 var SS=[['',L('كبير','Large')],['md',L('متوسط','Medium')],['sm',L('صغير','Small')]];
 var LL=[['tight',L('متقارب','Tight')],['',L('عادي','Normal')],['loose',L('متباعد','Loose')]];
@@ -1484,9 +1498,10 @@ sec.addEventListener('click',function(e){
  var b=e.target.closest('button');if(!b||!sec.contains(b))return;
  if(b.id==='mpReset'){P={p:'',f:'',s:'',l:''}}
  else{var g=b.parentNode,k=g.getAttribute('data-k');if(!k)return;P[k]=b.getAttribute('data-v')}
- save();apply(true);paint();
+ save();apply(true);paint();document.dispatchEvent(new Event('mpref'));
 });
 paint();
+window.MPREF={get:function(){return P},set:function(k,v){if(!(k in P))return;if(k!=='p'&&k!=='f'&&k!=='s'&&k!=='l')return;P[k]=(OK[k].indexOf(v)>=0)?v:'';save();apply(true);paint();document.dispatchEvent(new Event('mpref'))},reset:function(){P={p:'',f:'',s:'',l:''};save();apply(true);paint();document.dispatchEvent(new Event('mpref'))}};
 })();
 
 
@@ -1885,6 +1900,6 @@ g("setBtn").addEventListener("click",open);g("setBtn2").addEventListener("click"
 
 <script src="robot.js?v=4"></script>
 <script src="musammi.js?v=25"></script>
-<script src="ikhtibar.js?v=2"></script>
-<script src="mushafi.js?v=1"></script>
+<script src="ikhtibar.js?v=3"></script>
+<script src="mushafi.js?v=2"></script>
 </body></html>
