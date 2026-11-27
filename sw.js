@@ -1,5 +1,5 @@
 /* غيّر رقم الإصدار عند كل تحديث تنشره: أي تغيير في هذا الملف يُظهر للمستخدمين رسالة «يتوفر تحديث» */
-var VERSION = "1.4.7";
+var VERSION = "1.5.3";
 var CACHE = "murajaati-" + VERSION;
 /* خطوط صفحات المصحف تُحفظ في مخزن دائم لا يُمسح عند تغيير الإصدار، حتى لا تُنزَّل (نحو ١٠٠ ميجا) من جديد */
 var FONTS = "mfonts-v1";
@@ -9,7 +9,7 @@ var EXT = ["fonts.googleapis.com", "fonts.gstatic.com", "cdnjs.cloudflare.com", 
 
 self.addEventListener("install", function (e) {
   e.waitUntil(caches.open(CACHE).then(function (c) {
-    return Promise.all(["./", "manifest.json", "robot.js?v=4", "musammi.js?v=26", "apkupdate.js?v=1", "backup.js?v=1", "data/quran-text.json"].map(function (u) { return c.add(u).catch(function () {}); }));
+    return Promise.all(["./", "manifest.json", "robot.js?v=4", "musammi.js?v=25", "ikhtibar.js?v=2", "mushafi.js?v=1", "data/quran-text.json"].map(function (u) { return c.add(u).catch(function () {}); }));
   }));
 });
 
@@ -36,6 +36,7 @@ function put(r, res, ext) {
 self.addEventListener("fetch", function (e) {
   var r = e.request, u = new URL(r.url);
   if (r.method !== "GET") return;
+  if (r.headers.get("range")) return;   /* الصوت (تلاوة الاختبار وعبارة «أكمل») يُترك للشبكة: طلبات الصوت الجزئية لا تُخزَّن */
   var ext = u.origin !== location.origin;
   if (ext && EXT.indexOf(u.hostname) < 0) return;
   if (!ext && r.mode === "navigate") {
