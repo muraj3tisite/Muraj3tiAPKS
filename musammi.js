@@ -28,8 +28,8 @@
     return 1 - lev(a, b) / Math.max(a.length, b.length);
   }
   /* تقارب الأصوات التي يخلط فيها التعرّف الصوتي كثيرًا (ظ/ض، ذ/ز، ث/س/ص، ط/ت، ح/ه، ع/ء/ا). لا نضمّ ق/ك ولا غ/خ كي لا نقبل كلمة قرآنية أخرى */
-  var PHM = { "ء": "ا", "ع": "ا", "ظ": "ض", "ذ": "ز", "ث": "س", "ص": "س", "ط": "ت", "ح": "ه" };
-  function pk(w) { return w.replace(/[ءعظذثصطح]/g, function (c) { return PHM[c]; }).replace(/ا/g, "").replace(/(.)\1+/g, "$1"); }
+  var PHM = { "ء": "ا", "ع": "ا", "ظ": "ض", "ذ": "ز", "ث": "س", "ص": "س", "ط": "ت", "ح": "ه", "ق": "ك" };
+  function pk(w) { return w.replace(/[ءعظذثصطحق]/g, function (c) { return PHM[c]; }).replace(/ا/g, "").replace(/(.)\1+/g, "$1"); }
   function wsim(a, b) {
     if (same(a, b)) return 1;
     var sa = sk(a), sb = sk(b);
@@ -258,6 +258,24 @@
     }
     return null;
   }
+  /* هل يثبت التطابق بالكلمة التي بعده؟ (أو كانت آخر الصفحة، أو انتهى الكلام وكانت الكلمة غير قصيرة) */
+  function confirm(np, T, nj, final, w) {
+    if (np >= W.length) return true;
+    if (T[nj] !== undefined) return !!tryAt(np, T, nj);
+    return final && !!w && !w.loose && w.t.length >= 3;
+  }
+  /* كلمات زائدة في التعرّف قبل الكلمة المتوقعة: يُرجع عددها (١ أو ٢)، أو ٠، أو -١ = ننتظر كلامًا أكثر */
+  function insAt(T, final) {
+    var wait = false;
+    for (var k = 1; k <= 2; k++) {
+      if (T[st.j + k] === undefined) { if (!final) wait = true; break; }
+      var r = tryAt(st.pos, T, st.j + k); if (!r) continue;
+      var nj = st.j + k + r.tok, np = st.pos + r.adv;
+      if (confirm(np, T, nj, final, W[st.pos])) return k;
+      if (T[nj] === undefined && !final) wait = true;
+    }
+    return wait ? -1 : 0;
+  }
   function seq(p, T, s, lim) {
     var m = 0, j = s, q = p, r;
     while (q < W.length && j < T.length && m < lim && (r = tryAt(q, T, j))) { j += r.tok; q += r.adv; m++; }
@@ -313,7 +331,14 @@
   }
   function peek(T) {
     if (!st.on || st.wait || st.pos < 0 || st.pos >= W.length || st.pos < st.max || st.j >= T.length) return;
-    var r = tryAt(st.pos, T, st.j); if (!r || st.j + r.tok > T.length) return;
+    var r = tryAt(st.pos, T, st.j);
+    /* الكلمة لم تكتمل بعد في التعرّف (العالمي… ← العالمين): نُظهرها مبكرًا إن كان ما سُمع بدايتها */
+    if (!r && st.j === T.length - 1) {
+      var w = W[st.pos], e = w && !w.loose && !w.names ? sk0(w.t) : "", h = sk0(T[st.j]);
+      if (e && h.length >= 2 && h.length < e.length && e.indexOf(h) === 0 && h.length >= Math.ceil(e.length * .6)) { reveal(st.pos); st.peek = [st.pos, st.pos + 1]; }
+      return;
+    }
+    if (!r || st.j + r.tok > T.length) return;
     if (st.pos + r.adv >= W.length) {   /* آخر كلمة في الصفحة: لا ننتظر، ننتقل فورًا */
       for (var a = 0; a < r.adv; a++) reveal(st.pos + a);
       st.pos += r.adv; st.j += r.tok; adv(); return done();
@@ -368,6 +393,17 @@
         if (T[st.j + 1] === undefined) break;   /* قد يكون بداية كلمة فصلها التعرّف، ننتظر ما بعده */
         if (tryAt(st.pos, T, st.j + 1)) { st.j++; continue; }
       }
+      /* كلمة زائدة أدخلها التعرّف (يا، الله، آه ...) أو كلمتان، والكلمة المتوقعة بعدها صحيحة ← نتجاوز الزائد بصمت */
+      if (!w.names) {
+        var ins = insAt(T, final);
+        if (ins === -1) break;
+        if (ins > 0) { st.j += ins; continue; }
+      }
+      /* كلمة قصيرة سمعها التعرّف كلمة قصيرة أخرى (إنّ ← يا)، وما بعدها صحيح ← نقبلها */
+      if (shortW(w) && T[st.j].length <= 3) {
+        if (T[st.j + 1] === undefined) { if (!final) break; }
+        else { var r4 = tryAt(st.pos + 1, T, st.j + 1); if (r4 && confirm(st.pos + 1 + r4.adv, T, st.j + 1 + r4.tok, final, W[st.pos + 1])) { reveal(st.pos); if (st.rr) markRe(st.pos, st.pos + 1); st.pos++; st.j++; st.erred = false; adv(); continue; } }
+      }
       /* كلمة قصيرة أسقطها التعرّف الصوتي، وما بعدها صحيح ← نكشفها دون صافرة */
       if (shortW(w)) {
         var g3, r3 = null, waited = false;
@@ -395,6 +431,12 @@
         if (st.pos >= W.length) return done();
         continue;
       }
+      /* آخر كلمة في الصفحة تشبه المتوقعة وانتهى الكلام ← نقبلها (لا كلمة بعدها نتأكد بها) */
+      if (final && st.pos === W.length - 1 && !w.loose && !w.names && soft(w.t, T[st.j])) { reveal(st.pos); st.pos++; st.j++; adv(); return done(); }
+      /* كلمة واحدة غير مطابقة في آخر الكلام: قد تكون زائدة من التعرّف، فلا نحكم حتى نسمع ما بعدها */
+      if (T[st.j + 1] === undefined && !resync(T, st.j, final)) break;
+      /* آخر كلمة في الصفحة خاطئة والقارئ أكمل: نعلّمها خطأً وننتقل للصفحة التالية بدل التوقف عندها */
+      if (st.pos === W.length - 1 && final) { markErr(st.pos, st.pos + 1); if (!st.erred) { st.errs++; beep(); } st.pos++; st.j++; return done(); }
       /* الخطأ لا يُحكم به إلا بعد ثلاث كلمات (أو سكوت)، لأن التعرّف قد يصحّح نفسه */
       if (!final && avail < 3) break;
       /* وقفة قصيرة وسط القراءة: آخر كلمة قد يكون التعرّف ناقصًا فيها، فننتظر النتيجة النهائية قبل الحكم */
