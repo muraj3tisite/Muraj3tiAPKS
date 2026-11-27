@@ -91,7 +91,7 @@
     }
     return null;
   }
-  var API = { muqOf: muqOf, nameOk: nameOk, norm: norm, matchAyah: matchAyah, expectedWords: expectedWords, BSM: BSM, isBsm: isBsm, sim: sim, wsim: wsim };
+  var API = { nameOk: nameOk, norm: norm, matchAyah: matchAyah, expectedWords: expectedWords, BSM: BSM, isBsm: isBsm, sim: sim, wsim: wsim };
   if (typeof module !== "undefined" && module.exports) { module.exports = API; return; }
   G.Musammi = API;
 
@@ -290,14 +290,31 @@
     if (st.pos > st.max) st.max = st.pos;
     if (st.rr && st.pos >= st.max) { st.rr = false; [].forEach.call(document.querySelectorAll("#mushafText .wcur"), function (e) { e.classList.remove("wcur"); }); }
   }
+  /* كشف فوري (مثل ترتيل): الكلمة التي ينطقها القارئ الآن تظهر قبل أن يثبّتها التعرّف، ثم تُؤكَّد أو تُخفى */
+  function unpeek() {
+    if (!st.peek) return;
+    for (var i = Math.max(st.peek[0], st.pos); i < st.peek[1]; i++) if (W[i]) W[i].els.forEach(function (e) { if (!e.classList.contains("werr")) e.classList.remove("wrev"); });
+    st.peek = null;
+  }
+  function peek(T) {
+    if (!st.on || st.wait || st.pos < 0 || st.pos >= W.length || st.pos < st.max || st.j >= T.length) return;
+    var r = tryAt(st.pos, T, st.j); if (!r || st.j + r.tok > T.length) return;
+    if (st.pos + r.adv >= W.length) {   /* آخر كلمة في الصفحة: لا ننتظر، ننتقل فورًا */
+      for (var a = 0; a < r.adv; a++) reveal(st.pos + a);
+      st.pos += r.adv; st.j += r.tok; adv(); return done();
+    }
+    for (var b = 0; b < r.adv; b++) reveal(st.pos + b);
+    st.peek = [st.pos, st.pos + r.adv];
+  }
   function step(final, quiet) {
     if (!st.on || st.wait) return;
+    unpeek();
     var T = st.fin.concat(st.itx), avail, stable, r, jp, a;
     if (st.j > T.length) st.j = T.length;
     var guard = 400;
     while (st.on && guard--) {
       avail = T.length - st.j; stable = final ? avail : avail - 1;   /* آخر كلمة في النتيجة المؤقتة قد تتغيّر، فلا نحكم عليها بعد */
-      if (stable <= 0) break;
+      if (stable <= 0) { if (!final) peek(T); break; }
       if (st.pos < 0) {
         if (stable >= 4 && bsmAt(T, st.j) && !pageHasBsm()) { st.j += 4; continue; }
         if (!tryLock(T, stable)) break;
@@ -375,7 +392,7 @@
     var tk = toks(t), c = conf > 0 ? conf : 1;
     if (fin) { tk.forEach(function () { st.fc.push(c); }); st.fin = st.fin.concat(tk); st.itx = []; } else st.itx = tk;
     step(fin);
-    clearTimeout(st.tm); st.tm = setTimeout(function () { step(true, true); }, st.tmo || 1000);
+    clearTimeout(st.tm); st.tm = setTimeout(function () { step(true, true); }, st.tmo || 700);
   }
   function altScore(tk) {
     var T = st.fin.concat(tk), s = Math.min(st.j, st.fin.length), p, best = 0, r;
@@ -397,7 +414,8 @@
     var msg = "✓ " + gN("أتممتَ", "أتممتِ") + " الصفحة" + (m ? " — " + gN("تعثّرتَ", "تعثّرتِ") + " " + (m === 1 ? "مرة واحدة" : m + " مرات") : " بلا أي تعثّر");
     if (pg && pg < 604 && G.tjFlip) {
       st.wait = true;            /* نحتفظ بما نُطق من الكلمات إلى أن تُرسم الصفحة التالية */
-      toast(msg + " — ننتقل إلى الصفحة التالية…", "ok", 3000);
+      st.peek = null;
+      toast(msg, "ok", 2500);
       clearTimeout(st.wt);
       st.wt = setTimeout(function () { if (st.wait && st.on) { st.wait = false; toast("تعذّر فتح الصفحة التالية. تأكد من الاتصال ثم اضغط الزر للمتابعة.", "", 6000); stop(true); } }, 15000);
       try { G.tjFlip(1); } catch (e) { st.wait = false; stop(true); }
@@ -410,7 +428,55 @@
   /* المحرك: تعرّف المتصفح الصوتي عبر الإنترنت فقط */
   var NOSR = "هذا المتصفح لا يدعم التعرّف الصوتي. استخدم Chrome أو Edge أو Safari.";
   var NONET = "التسميع الآلي يحتاج إلى اتصال بالإنترنت. اتصل بالإنترنت ثم أعد المحاولة.";
+  /* تطبيق الأندرويد (Capacitor): واجهة الويب للتعرّف الصوتي لا تعمل داخل WebView، فنستخدم مكوّن التعرّف الأصلي */
+  function nativeSR() {
+    try {
+      var C = G.Capacitor;
+      if (!(C && C.isNativePlatform && C.isNativePlatform())) return null;
+      return (C.Plugins && C.Plugins.SpeechRecognition) || null;
+    } catch (e) { return null; }
+  }
+  function nativeEngine(P) {
+    var hs = [], last = "", alive = false, wd = null, fast = 0, t0 = 0;
+    function clean() { clearTimeout(wd); hs.forEach(function (h) { try { h.remove(); } catch (e) {} }); hs = []; }
+    return {
+      start: function (cb, onEnd) {
+        var ended = false; alive = true; last = ""; t0 = Date.now();
+        function fin(err) {
+          if (ended) return; ended = true; clean();
+          if (!err && last && alive) { var t = last; last = ""; cb(t, true); }
+          if (Date.now() - t0 < 800) fast++; else fast = 0;
+          if (!err && fast >= 4) err = "service-not-allowed";   /* فشل متكرر فوري: لا نعيد المحاولة إلى ما لا نهاية */
+          onEnd(err);
+        }
+        function arm() { clearTimeout(wd); wd = setTimeout(function () { try { P.stop(); } catch (e) {} fin(); }, 9000); }
+        Promise.resolve(P.checkPermissions()).then(function (p) {
+          if (p && p.speechRecognition === "granted") return p;
+          return P.requestPermissions();
+        }).then(function (p) {
+          if (!p || p.speechRecognition !== "granted") throw new Error("not-allowed");
+          return Promise.all([
+            P.addListener("partialResults", function (d) {
+              var m = d && d.matches; if (!m || !m[0] || !alive) return;
+              last = m.length > 1 ? bestAlt(m.filter(Boolean).map(function (x) { return { t: x }; })).t : m[0]; cb(last, false); arm();
+            }),
+            P.addListener("listeningState", function (d) { if (d && d.status === "stopped") fin(); })
+          ]);
+        }).then(function (h) {
+          hs = h; arm();
+          return P.start({ language: "ar-SA", maxResults: 3, partialResults: true, popup: false });
+        }).then(function (r) {
+          if (r && r.matches && r.matches[0]) { last = r.matches.length > 1 ? bestAlt(r.matches.filter(Boolean).map(function (x) { return { t: x }; })).t : r.matches[0]; fin(); }
+        }).catch(function (e) {
+          var m = String((e && e.message) || e);
+          fin(/permission|not-allowed|denied/i.test(m) ? "not-allowed" : (/network|connect/i.test(m) ? "network" : "aborted"));
+        });
+      },
+      stop: function () { alive = false; clean(); try { P.stop(); } catch (e) {} }
+    };
+  }
   function engine() {
+    var NP = nativeSR(); if (NP) return nativeEngine(NP);
     var SR = G.SpeechRecognition || G.webkitSpeechRecognition; if (!SR) return null;
     var r = new SR(); r.lang = "ar-SA"; r.continuous = true; r.interimResults = true; r.maxAlternatives = 3;
     try { if ("processLocally" in r) r.processLocally = false; } catch (e) {}
@@ -428,11 +494,18 @@
   function resetPage() {
     var carry = st.wait;   /* انتقال تلقائي: لا نمسح الكلام المنطوق، فقد يكون القارئ بدأ الصفحة التالية */
     if (!carry) { st.fin = []; st.fc = []; st.itx = []; st.j = 0; }
-    st.sus = ""; st.pos = -1; st.s0 = -1; st.errs = 0; st.erred = false; st.max = 0; st.rr = false; st.wait = false;
+    st.sus = ""; st.pos = -1; st.s0 = -1; st.errs = 0; st.erred = false; st.max = 0; st.rr = false; st.wait = false; st.peek = null;
     clearTimeout(st.tm); clearTimeout(st.wt);
     W = buildWords();
     if (st.on) lock();
-    if (carry && st.on) { step(false); st.tm = setTimeout(function () { step(true, true); }, st.tmo || 1000); }
+    /* بعد الانتقال التلقائي: القارئ يكمل من أول الصفحة الجديدة، فلا حاجة لتحديد موضعه من جديد */
+    if (carry && st.on && W.length) { st.pos = 0; st.s0 = 0; }
+    if (st.on) prefetchNext();
+    if (carry && st.on) { step(false); st.tm = setTimeout(function () { step(true, true); }, st.tmo || 700); }
+  }
+  /* تحميل خط الصفحة التالية مسبقًا، فيكون الانتقال إليها فوريًّا */
+  function prefetchNext() {
+    try { var pg = G.tjState && G.tjState.pg; if (pg && pg < 604 && G.tjFont) G.tjFont(pg + 1, function () {}); } catch (e) {}
   }
   function setLive(on) {
     var b = $("msBtn"), r = $("msRobot");
@@ -446,7 +519,7 @@
       if (!ok) return toast("ملف النص غير موجود: ضع data/quran-text.json.", "", 6000);
       var en = engine(); if (!en) return toast(NOSR, "", 6000);
       toast("");
-      st.tmo = 1000; st.rec = en; st.on = true; setLive(true);
+      st.tmo = 700; st.rec = en; st.on = true; setLive(true);
       resetPage(); lock();
       var run = function () {
         if (st.itx.length) { st.itx = []; if (st.j > st.fin.length) st.j = st.fin.length; }
@@ -454,7 +527,7 @@
           if (!st.on) return;
           if (e2 === "not-allowed" || e2 === "service-not-allowed") { toast("اسمح للموقع باستخدام الميكروفون.", "", 7000); return stop(true); }
           if (e2 === "network" || e2 === "language-not-supported") { toast(NONET, "", 6000); return stop(true); }
-          setTimeout(run, 250);
+          setTimeout(run, 30);   /* إعادة تشغيل فورية حتى لا تضيع كلمات بين الجلسات */
         });
       };
       run();
