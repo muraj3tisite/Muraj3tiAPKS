@@ -4,12 +4,14 @@
   "use strict";
   /* ===== 1) التطبيع والمطابقة (لا يعتمد على المتصفح) ===== */
   function norm(s) {
-    return String(s || "").replace(/\u0648\u0670/g, "ا").replace(/\u0670/g, "ا").replace(/[\u0640\u064B-\u065F\u06D6-\u06ED]/g, "")
+    return String(s || "").replace(/\u0649\u0670/g, "\u0649").replace(/\u0648\u0670/g, "ا").replace(/\u0670/g, "ا").replace(/[\u0640\u064B-\u065F\u06D6-\u06ED]/g, "")
       .replace(/[\u0671\u0622\u0623\u0625]/g, "ا").replace(/ى/g, "ي").replace(/ة/g, "ه")
       .replace(/ؤ/g, "و").replace(/ئ/g, "ي").replace(/[^\u0621-\u064A ]/g, " ").replace(/\s+/g, " ").replace(/(^| )ء(?=ا)/g, "$1").trim();   /* ءامنوا، ءايات (مدّ أول الكلمة) = آمنوا، آيات */
   }
   /* هيكل الكلمة: بلا ألف، فلا يضرّ اختلاف رسم الألف الخنجرية (مٰلك/مالك) */
   function sk(w) { w = w.replace(/^ال(?=..)/, ""); return w.replace(/ا/g, ""); }
+  function sk0(w) { return w.replace(/ا/g, ""); }
+  function same(a, b) { return sk(a) === sk(b) || sk0(a) === sk0(b); }
   function lev(a, b) {
     var m = a.length, n = b.length, p = [], i, j, c, t;
     for (j = 0; j <= n; j++) p[j] = j;
@@ -20,8 +22,8 @@
     return p[n];
   }
   function sim(a, b) {
+    if (same(a, b)) return 1;
     a = sk(a); b = sk(b);
-    if (a === b) return 1;
     if (Math.max(a.length, b.length) <= 4) return 0; /* الكلمات القصيرة (حتى ٤ حروف): تطابق تام، فلا يمرّ حرف ناقص */
     return 1 - lev(a, b) / Math.max(a.length, b.length);
   }
@@ -29,12 +31,15 @@
   var PHM = { "ء": "ا", "ع": "ا", "ظ": "ض", "ذ": "ز", "ث": "س", "ص": "س", "ط": "ت", "ح": "ه" };
   function pk(w) { return w.replace(/[ءعظذثصطح]/g, function (c) { return PHM[c]; }).replace(/ا/g, "").replace(/(.)\1+/g, "$1"); }
   function wsim(a, b) {
+    if (same(a, b)) return 1;
     var sa = sk(a), sb = sk(b);
-    if (sa === sb) return 1;
-    if (/اء$/.test(a) !== /اء$/.test(b) && sk(a.replace(/اء$/, "ا")) === sk(b.replace(/اء$/, "ا"))) return .95;
-    if (Math.min(sa.length, sb.length) < 3) return 0;
+    if (/اء$/.test(a) !== /اء$/.test(b) && same(a.replace(/اء$/, "ا"), b.replace(/اء$/, "ا"))) return .95;
+    if (Math.min(a.length, b.length) < 2) return 0;
     var pa = pk(sa), pb = pk(sb);
+    if (pk(sk0(a)) === pk(sk0(b)) && pk(sk0(a)).length >= 1) return .92;   /* ظن/ضن، اذ/از */
+    if (Math.min(a.length, b.length) < 3) return 0;
     if (pa === pb) return .92;
+    if (Math.min(sa.length, sb.length) < 2) return 0;
     var L = Math.max(pa.length, pb.length);
     if (L <= 3) return 0;
     return 1 - lev(pa, pb) / L;
@@ -150,7 +155,8 @@
     return st.ac;
   }
   G.MusammiAC = function () { return ac(); };
-  var TOL = .75, STOL = .5;   /* حدّ التشابه */
+  G.MusammiDbg = function () { return st; };
+  var TOL = .72, STOL = .4;   /* حدّ التشابه */
   function beep() {
     var n = Date.now(); if (n - st.beepT < 600) return; st.beepT = n;
     var r = $("msRobot"); if (r) { r.classList.remove("rb-err"); void r.offsetWidth; r.classList.add("rb-err"); }
@@ -213,7 +219,9 @@
   /* ===== المطابقة كلمةً كلمة ===== */
   function toks(s) { var n = norm(s); return n ? n.split(" ") : []; }
   function wm(a, b) { return !!a && !!b && wsim(a, b) >= TOL; }
-  function soft(a, b) { return !!a && !!b && sk(a).length >= 3 && wsim(a, b) >= STOL; }
+  function soft(a, b) { return !!a && !!b && a.length >= 3 && b.length >= 2 && (wsim(a, b) >= STOL || sim(a, b) >= STOL); }
+  /* كلمة قصيرة (من، ما، لا، ثم، إن، أو ...) كثيرًا ما يُسقطها التعرّف الصوتي */
+  function shortW(w) { return w && !w.loose && !w.names && (w.t.length <= 3 || sk0(w.t).length <= 2); }
   /* هل تُطابق الكلمة المتوقعة في الموضع p الكلمات المنطوقة من T[j]؟ تُرجع {tok: كلمات منطوقة مستهلكة، adv: كلمات صفحة متقدَّم بها} أو null */
   function tryAt(p, T, j) {
     var w = W[p]; if (!w || j >= T.length) return null;
@@ -226,9 +234,16 @@
     }
     if (wm(w.t, T[j])) return { tok: 1, adv: 1 };
     /* دمج أو فصل في التعرّف: «يوم الدين» ↔ «يومالدين» */
-    if (T[j + 1]) { var c = T[j] + T[j + 1]; if (c.length >= 6 && wsim(w.t, c) >= .85) return { tok: 2, adv: 1 }; }
-    var nx = W[p + 1];
-    if (nx && !nx.loose && !nx.names && (w.t + nx.t).length >= 8 && wsim(w.t + nx.t, T[j]) >= .88) return { tok: 1, adv: 2 };
+    if (T[j + 1]) {
+      var c = T[j] + T[j + 1]; if (c.length >= 4 && wsim(w.t, c) >= .85) return { tok: 2, adv: 1 };
+      if (T[j + 2]) { c += T[j + 2]; if (c.length >= 7 && wsim(w.t, c) >= .88) return { tok: 3, adv: 1 }; }
+    }
+    /* التعرّف دمج كلمتين أو ثلاثًا في كلمة واحدة: «بينهم قد» ← «بينهمقد» */
+    var nx = W[p + 1], nn = W[p + 2];
+    if (nx && !nx.loose && !nx.names) {
+      if ((w.t + nx.t).length >= 4 && wsim(w.t + nx.t, T[j]) >= .85) return { tok: 1, adv: 2 };
+      if (nn && !nn.loose && !nn.names && (w.t + nx.t + nn.t).length >= 7 && wsim(w.t + nx.t + nn.t, T[j]) >= .88) return { tok: 1, adv: 3 };
+    }
     return null;
   }
   /* بعد خطأ: إن نطق القارئ كلمة صحيحة من الكلمات التالية (حتى ٦) وتلتها الكلمة التي بعدها صحيحة، فالكلمات بينهما أخطأ فيها أو لم يعرفها */
@@ -348,6 +363,24 @@
         var r2 = tryAt(st.pos + 1, T, st.j + 1);
         if (r2) { reveal(st.pos); if (st.rr) markRe(st.pos, st.pos + 1); st.pos++; st.j++; st.erred = false; adv(); continue; }
       }
+      /* حرف منفرد زائد في التعرّف (و، ه ...) والكلمة التالية له صحيحة ← نتجاوزه بصمت */
+      if (T[st.j].length === 1) {
+        if (T[st.j + 1] === undefined) break;   /* قد يكون بداية كلمة فصلها التعرّف، ننتظر ما بعده */
+        if (tryAt(st.pos, T, st.j + 1)) { st.j++; continue; }
+      }
+      /* كلمة قصيرة أسقطها التعرّف الصوتي، وما بعدها صحيح ← نكشفها دون صافرة */
+      if (shortW(w)) {
+        var g3, r3 = null, waited = false;
+        for (g3 = 1; g3 <= 2 && !r3; g3++) {
+          if (g3 === 2 && !shortW(W[st.pos + 1])) break;
+          var c3 = tryAt(st.pos + g3, T, st.j); if (!c3) continue;
+          var nj = st.j + c3.tok, np = st.pos + g3 + c3.adv;
+          var ok3 = np >= W.length || (T[nj] !== undefined ? !!tryAt(np, T, nj) : (final && W[st.pos + g3].t.length >= 3));
+          if (ok3) r3 = { nj: nj, np: np }; else if (T[nj] === undefined && !final) waited = true;
+        }
+        if (r3) { for (a = st.pos; a < r3.np; a++) reveal(a); if (st.rr) markRe(st.pos, r3.np); st.pos = r3.np; st.j = r3.nj; st.erred = false; adv(); if (st.pos >= W.length) return done(); continue; }
+        if (waited) break;
+      }
       jp = findJump(T, avail);
       if (jp) {
         for (a = jp.p; a < jp.q; a++) reveal(a);
@@ -367,7 +400,7 @@
       /* وقفة قصيرة وسط القراءة: آخر كلمة قد يكون التعرّف ناقصًا فيها، فننتظر النتيجة النهائية قبل الحكم */
       if (quiet && avail < 2) break;
       /* كلام لم يتأكد منه التعرّف (ثقة منخفضة) لا نحكم عليه بالخطأ، نتجاوزه بصمت */
-      if ((st.j < st.fin.length ? (st.fc[st.j] || 1) : 1) < .5) { st.j++; continue; }
+      if ((st.j < st.fin.length ? (st.fc[st.j] || 1) : 1) < .6) { st.j++; continue; }
       /* في النتائج المؤقتة: لا بد أن يثبت الاختلاف نفسه في تحديثين متتاليين، فقد يصحّح التعرّف نفسه */
       if (!final) { var key = st.pos + "|" + T[st.j]; if (st.sus !== key) { st.sus = key; break; } }
       var rs = resync(T, st.j, final);
@@ -390,9 +423,20 @@
   function onSpeech(t, fin, conf) {
     if (!st.on) return;
     var tk = toks(t), c = conf > 0 ? conf : 1;
+    remapJ(tk);
     if (fin) { tk.forEach(function () { st.fc.push(c); }); st.fin = st.fin.concat(tk); st.itx = []; } else st.itx = tk;
     step(fin);
     clearTimeout(st.tm); st.tm = setTimeout(function () { step(true, true); }, st.tmo || 700);
+  }
+  /* التعرّف يعدّل كلماته المؤقتة (يدمج أو يفصل أو يصحّح). نعيد ضبط موضعنا في الكلام حسب عدد الحروف المستهلكة، حتى لا نتخطّى كلمة فنحكم بخطأ كاذب */
+  function remapJ(tk) {
+    var F = st.fin.length, c = st.j - F; if (c <= 0) return;
+    var old = st.itx, i, same = c <= tk.length;
+    for (i = 0; same && i < c; i++) if (old[i] !== tk[i]) same = false;
+    if (same) return;
+    var target = old.slice(0, c).join("").length, cum = 0, best = 0, bd = target;
+    for (i = 1; i <= tk.length; i++) { cum += tk[i - 1].length; var d = Math.abs(cum - target); if (d <= bd) { bd = d; best = i; } if (cum > target + 3) break; }
+    st.j = F + best;
   }
   function altScore(tk) {
     var T = st.fin.concat(tk), s = Math.min(st.j, st.fin.length), p, best = 0, r;
