@@ -99,6 +99,8 @@
   var API = { nameOk: nameOk, norm: norm, matchAyah: matchAyah, expectedWords: expectedWords, BSM: BSM, isBsm: isBsm, sim: sim, wsim: wsim };
   if (typeof module !== "undefined" && module.exports) { module.exports = API; return; }
   G.Musammi = API;
+  /* محرك التعرّف نفسه (متصفح أو مكوّن الأندرويد) يستعمله «اختبار المحفوظ» أيضًا؛ pick = دالة اختيار البديل الأوفق */
+  API.engine = function (pick) { return engine(pick); };
 
 
   /* ===== 2) الواجهة والمحرك: تسميع كلمةً كلمة، من أي موضع في الصفحة ===== */
@@ -522,7 +524,7 @@
       return (C.Plugins && C.Plugins.SpeechRecognition) || null;
     } catch (e) { return null; }
   }
-  function nativeEngine(P) {
+  function nativeEngine(P, pick) {
     var hs = [], last = "", alive = false, wd = null, fast = 0, t0 = 0;
     function clean() { clearTimeout(wd); hs.forEach(function (h) { try { h.remove(); } catch (e) {} }); hs = []; }
     return {
@@ -544,7 +546,7 @@
           return Promise.all([
             P.addListener("partialResults", function (d) {
               var m = d && d.matches; if (!m || !m[0] || !alive) return;
-              last = m.length > 1 ? bestAlt(m.filter(Boolean).map(function (x) { return { t: x }; })).t : m[0]; cb(last, false); arm();
+              last = m.length > 1 ? (pick || bestAlt)(m.filter(Boolean).map(function (x) { return { t: x }; })).t : m[0]; cb(last, false); arm();
             }),
             P.addListener("listeningState", function (d) { if (d && d.status === "stopped") fin(); })
           ]);
@@ -552,7 +554,7 @@
           hs = h; arm();
           return P.start({ language: "ar-SA", maxResults: 3, partialResults: true, popup: false });
         }).then(function (r) {
-          if (r && r.matches && r.matches[0]) { last = r.matches.length > 1 ? bestAlt(r.matches.filter(Boolean).map(function (x) { return { t: x }; })).t : r.matches[0]; fin(); }
+          if (r && r.matches && r.matches[0]) { last = r.matches.length > 1 ? (pick || bestAlt)(r.matches.filter(Boolean).map(function (x) { return { t: x }; })).t : r.matches[0]; fin(); }
         }).catch(function (e) {
           var m = String((e && e.message) || e);
           fin(/permission|not-allowed|denied/i.test(m) ? "not-allowed" : (/network|connect/i.test(m) ? "network" : "aborted"));
@@ -561,15 +563,15 @@
       stop: function () { alive = false; clean(); try { P.stop(); } catch (e) {} }
     };
   }
-  function engine() {
-    var NP = nativeSR(); if (NP) return nativeEngine(NP);
+  function engine(pick) {
+    var NP = nativeSR(); if (NP) return nativeEngine(NP, pick);
     var SR = G.SpeechRecognition || G.webkitSpeechRecognition; if (!SR) return null;
     var r = new SR(); r.lang = "ar-SA"; r.continuous = true; r.interimResults = true; r.maxAlternatives = 3;
     try { if ("processLocally" in r) r.processLocally = false; } catch (e) {}
     return { start: function (cb, onEnd) {
       r.onresult = function (e) { for (var i = e.resultIndex; i < e.results.length; i++) {
         var res = e.results[i];
-        var a = bestAlt([].map.call(res, function (x) { return { t: x.transcript, c: x.confidence }; }));
+        var a = (pick || bestAlt)([].map.call(res, function (x) { return { t: x.transcript, c: x.confidence }; }));
         if (res.isFinal) cb(a.t, true, a.c); else cb(a.t, false);
       } };
       r.onerror = function (e) { onEnd(e.error); }; r.onend = function () { onEnd(); };
