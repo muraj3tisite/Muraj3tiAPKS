@@ -309,22 +309,22 @@
   }
   /* يُرجع {pg, j}: صفحة الموضع المطابق لأول كلماتٍ نطقها القارئ، وj موضع أول كلمة منها في الكلام. وإلا null */
   function farFind(T, stable, final) {
-    if (stable < 4) return null;
+    if (stable < 3) return null;
     var X = buildIndex(); if (!X) return null;
     var cur = (G.tjState && G.tjState.pg) || 0, hits = [], s, d, H, len, t, ord, ci, cand, m, a0, run, mx = 0, top, pages = {}, np = 0, pick = null, bd = 1e9;
-    for (s = st.j; s <= st.j + 2 && s + 4 <= st.j + stable; s++) {
+    for (s = st.j; s <= st.j + 2 && s + 3 <= st.j + stable; s++) {
       if (bsmAt(T, s)) continue;                              /* البسملة تتكرر في المصحف، لا تُحدّد موضعًا */
       H = T.slice(s, Math.min(st.j + stable, s + 8));
-      ord = []; for (t = 0; t < H.length; t++) ord.push(t);
-      ord.sort(function (x, y) { return sk(H[y]).length - sk(H[x]).length; });   /* نبدأ بأطول كلمة: أقلّ المواضع المحتملة */
+      ord = []; for (t = 0; t < H.length; t++) if (sk(H[t]).length >= 2 && X.idx[sk(H[t])]) ord.push(t);
+      ord.sort(function (x, y) { return X.idx[sk(H[x])].length - X.idx[sk(H[y])].length; });   /* نبدأ بأندر كلمة في المصحف: أقلّ المواضع المحتملة */
       for (ci = 0; ci < 3 && ci < ord.length; ci++) {
         d = ord[ci]; cand = X.idx[sk(H[d])];
-        if (!cand || sk(H[d]).length < 3 || cand.length > 300) continue;
+        if (cand.length > 400) continue;
         for (m = 0; m < cand.length; m++) {
           a0 = cand[m] - d; if (a0 < 0) continue;
           run = 0; len = 0;
           while (run < H.length && a0 + run < X.W.length && wm(X.W[a0 + run], H[run])) { len += sk(H[run]).length; run++; }
-          if (run >= 4 && len >= 10) hits.push({ a: a0, run: run, s: s });   /* أربع كلمات متتالية على الأقل وبحروف كافية */
+          if (run >= 3 && len >= 9) hits.push({ a: a0, run: run, s: s });   /* ثلاث كلمات متتالية على الأقل وبحروف كافية */
         }
         if (hits.length) break;
       }
@@ -355,18 +355,28 @@
     return true;
   }
 
-  /* القفل: أول كلمتين صحيحتين (أو كلمة فريدة طويلة) تحدّدان موضع القارئ في الصفحة، أيًّا كان */
-  function tryLock(T, stable) {
-    var Ts = T.slice(0, st.j + stable), best = null, uniq = [], s, p, r;
+  /* القفل: كلمتان متتاليتان صحيحتان على الأقل تحدّدان موضع القارئ في الصفحة، أيًّا كان.
+     لا نثبّت على كلمة واحدة تشبه كلمة في الصفحة (كانت تُثبَّت في موضع خاطئ فتُكشف الآيات الأولى وتأتي الصافرة)،
+     وإن تطابق الكلام مع موضعين في الصفحة ننتظر كلامًا أكثر ليتبيّن الصحيح. */
+  function tryLock(T, stable, final) {
+    var Ts = T.slice(0, st.j + stable), best = null, s, p, r, all, mx, tops;
     for (s = st.j; s < Math.min(Ts.length, st.j + 3); s++) {
-      best = null; uniq = [];
+      all = []; mx = 0;
       for (p = 0; p < W.length; p++) {
-        r = seq(p, Ts, s, 3); if (!r.m) continue;
-        if (r.m >= 2) { if (!best || r.m > best.m) best = { m: r.m, p: p, q: r.q, j: r.j }; }
-        else uniq.push({ m: 1, p: p, q: r.q, j: r.j });
+        r = seq(p, Ts, s, 4); if (r.m < 2) continue;
+        all.push({ m: r.m, p: p, q: r.q, j: r.j }); if (r.m > mx) mx = r.m;
       }
-      if (!best && uniq.length === 1 && sk(Ts[s]).length >= 3) best = uniq[0];
-      if (best) break;
+      if (all.length) {
+        tops = all.filter(function (x) { return x.m === mx; });
+        if (tops.length > 1 && mx < 4 && !final) return false;   /* موضعان محتملان: نتريّث */
+        best = tops[0]; break;
+      }
+      /* كلمة واحدة: تُقبل فقط عند انتهاء الكلام، إن كانت طويلة وتطابق موضعًا واحدًا بدقة */
+      if (final && sk(Ts[s]).length >= 4) {
+        var one = [];
+        for (p = 0; p < W.length; p++) { r = seq(p, Ts, s, 1); if (r.m === 1 && W[p].t && sk(W[p].t) === sk(Ts[s])) one.push({ m: 1, p: p, q: r.q, j: r.j }); }
+        if (one.length === 1) { best = one[0]; break; }
+      }
     }
     if (!best) return false;
     for (p = 0; p < best.q; p++) reveal(p);   /* الكلمة المقروءة وكل ما قبلها */
@@ -428,7 +438,7 @@
       if (stable <= 0) { if (!final) peek(T); break; }
       if (st.pos < 0) {
         if (stable >= 4 && bsmAt(T, st.j) && !pageHasBsm()) { st.j += 4; continue; }
-        if (!tryLock(T, stable)) { if (farJump(T, stable, final)) return; break; }   /* ليس في هذه الصفحة: نبحث في المصحف كله */
+        if (!tryLock(T, stable, final)) { if (farJump(T, stable, final)) return; break; }   /* ليس في هذه الصفحة: نبحث في المصحف كله */
         if (st.pos >= W.length) return done();
         continue;
       }
