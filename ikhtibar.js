@@ -167,11 +167,12 @@
   var SID = 0, T = null, CUR = null;
   var dead = function (sid) { return sid !== SID || !T; };
 
+  var GAPEM = .36;   /* المسافة الثابتة بين الكلمات في كل الأسطر (بالـ em) */
   var CSS = "#t-test .ik-top{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px}" +
     "#t-test .ik-st{font-weight:700;margin:12px 0 4px;min-height:1.8em}" +
-    "#t-test .ik-ay{font-family:'Amiri Quran','Amiri','Noto Naskh Arabic',serif;font-size:26px;line-height:2.6;text-align:justify;min-height:3em;padding:6px 4px}" +
-    "#t-test .ikw{display:inline-block;margin:0 3px;padding:0 6px;border-radius:8px;transition:background .35s,color .35s,box-shadow .35s}" +
-    "#t-test .ikw:not(.on){color:transparent;background:var(--acc2);text-shadow:none;user-select:none}" +
+    "#t-test .ik-ay{font-family:'Amiri Quran','Amiri','Noto Naskh Arabic',serif;font-size:26px;line-height:2.5;text-align:center;min-height:3em;padding:6px 4px}" +
+    "#t-test .ikw{display:inline-block;margin:.1em .3em;padding:0 .45em;line-height:1.75;border-radius:.4em;transition:background .35s,color .35s,box-shadow .35s}" +
+    "#t-test .ikw:not(.on){color:transparent;background:var(--acc2);box-shadow:inset 0 0 0 1.5px color-mix(in srgb,var(--acc) 38%,transparent);text-shadow:none;user-select:none}" +
     "#t-test .ikw:not(.on).nx{animation:ikNx 1.4s ease-in-out infinite}" +
     "@keyframes ikNx{0%,100%{box-shadow:0 0 0 0 rgba(212,160,23,0)}50%{box-shadow:0 0 0 2px rgba(212,160,23,.7)}}" +
     "#t-test .ikw.on{animation:ikIn .6s cubic-bezier(.22,1.25,.36,1) both}" +
@@ -182,10 +183,11 @@
     "@media(prefers-reduced-motion:reduce){#t-test .ikw.on,#t-test .ikw:not(.on).nx{animation:none}#t-test .ikq .ikg.on i,#t-test .ikq .ikg:not(.on).nx{animation:none}}" +
     "#t-test .ik-ay.mq{font-size:inherit;line-height:normal;text-align:initial;max-height:none;overflow:visible;min-height:0;padding:0}" +
     "#t-test .ik-ay.mq.ok .mushaf-frame{border-color:var(--ok)}#t-test .ik-ay.mq.bad .mushaf-frame{border-color:#d93025}" +
-    "#t-test .ikq .ikg{display:block;border-radius:.16em;transition:background .35s,box-shadow .35s}" +
+    "#t-test .ikq .qline{justify-content:center!important;column-gap:" + GAPEM + "em!important}" +
+    "#t-test .ikq .ikg{display:block;line-height:1.6;padding:.05em .12em;border-radius:.22em;transition:background .35s,box-shadow .35s}" +
     "#t-test .ikq .ikg.off{visibility:hidden}" +
     "#t-test .ikq .ikg i{display:block;font-style:normal}" +
-    "#t-test .ikq .ikg:not(.on):not(.off){background:var(--acc2)}#t-test .ikq .ikg:not(.on) i{opacity:0}" +
+    "#t-test .ikq .ikg:not(.on):not(.off){background:var(--acc2);box-shadow:inset 0 0 0 1.5px color-mix(in srgb,var(--acc) 38%,transparent)}#t-test .ikq .ikg:not(.on) i{opacity:0}" +
     "#t-test .ikq .ikg:not(.on).nx{animation:ikNx 1.4s ease-in-out infinite}" +
     "#t-test .ikq .ikg.on i{animation:ikIn .6s cubic-bezier(.22,1.25,.36,1) both}" +
     "#t-test .ikq .ikg.on.x{background:rgba(217,48,37,.16);box-shadow:0 0 0 1.5px rgba(217,48,37,.65)}" +
@@ -273,7 +275,7 @@
     tx.style.fontSize = "40px";
     [].forEach.call(lines, function (l) {
       var w = 0, n = 0; [].forEach.call(l.querySelectorAll(".qw"), function (x) { w += x.getBoundingClientRect().width; n++; });
-      if (n) { w += (n - 1) * .22 * 40; if (w > mx) mx = w; }
+      if (n) { w += (n - 1) * GAPEM * 40; if (w > mx) mx = w; }
     });
     if (mx) tx.style.fontSize = Math.min(40 * W / mx, 64).toFixed(2) + "px";
     /* حارس: إن بقي سطر أعرض من الصفحة (قياس بخط غير فعّال بعد) صغّر الخط حتى يتسع */

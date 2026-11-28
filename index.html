@@ -93,6 +93,7 @@ ol,ul{padding-inline-start:22px}
 .stage{width:100%;max-width:720px}
 #slide{min-height:340px;background:var(--card);border:1px solid var(--line);border-radius:20px;padding:26px 20px 22px;box-shadow:0 10px 30px rgba(10,30,70,.13);display:flex;flex-direction:column;justify-content:center;gap:12px;overflow:hidden}
 #slide.in{animation:sIn .6s ease both}
+#slide.out{opacity:0;transform:translateX(calc(var(--dx,24px) * -.6));transition:opacity .25s ease,transform .25s ease}
 @keyframes sIn{from{opacity:0;transform:translateX(var(--dx,24px))}to{opacity:1;transform:none}}
 @keyframes fill{from{width:0}to{width:100%}}
 .chip{align-self:center;font-size:13px;font-weight:800;color:var(--acc);background:var(--acc2);padding:2px 16px;border-radius:99px}
@@ -421,13 +422,6 @@ html[data-ml="loose"] .mushaf-text .qline{height:2.3em}
  <h1 class="itl">أهلُ القرآن</h1>
  <div class="stage">
   <div id="slide" aria-live="polite" class="in" style="--dx: -24px;"><span class="chip">مقدمة</span><p class="body">حِفظُ القُرآنِ الكَريمِ مِن أجَلِّ القُرُباتِ وأعظَمِ الطَّاعاتِ إذا خَلصَت فيه النِّيَّةُ لرَبِّ الأرضِ والسَّمَواتِ.</p></div>
-  <div class="prog"><div id="prog" style="animation: 10920ms linear 0s 1 normal forwards running fill;"></div></div>
-  <div class="ctl">
-   <button id="prevS" aria-label="السابق"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9,5 16,12 9,19"></polyline></svg></button>
-   <button id="playS" aria-label="إيقاف مؤقت">❚❚</button>
-   <button id="nextS" aria-label="التالي"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15,5 8,12 15,19"></polyline></svg></button>
-  </div>
-  <div class="dots" id="dots"></div>
  </div>
  <button class="p cta" id="goBtn">مراجعتي</button>
 </section>
@@ -923,24 +917,23 @@ var INTRO_EN=[
 {k:'Poem',v:[['The people of the Quran are leaders by whom the guided are led,','the people of the path to the pleasure of the Almighty.'],['But they must act upon what is in it,','of what is prescribed for the righteous:'],['sincerity, devotion and beautiful worship,','night prayer along with fasting by day,'],['piety, asceticism and restraint,','and resembling the character of the best of people.']]},
 {k:'Poem',v:[['Religiosity, self-guarding and trustworthiness,','and avoiding the traits of the wicked,'],['performing obligations, avoiding the forbidden,','and keeping up daily litanies and remembrances.'],['O bearer of the Quran, if you are thus,','then joy to you in winning the final abode.'],['But if you neglect its limits, you will not benefit','from its letters, and you will dwell in the abode of ruin.']]}
 ];
-var iSi=0,iTm=null,iPlaying=true;
+var iSi=0,iTm=null,iFx=null;
 function introHTML(s){var h='<span class="chip">'+s.k+'</span>';
  if(s.v){h+='<div class="poem">'+s.v.map(function(r){return '<p><span>'+r[0]+'</span><span>'+r[1]+'</span></p>'}).join('')+'</div>';return h}
  if(s.pre)h+='<p class="pre">'+s.pre+'</p>';
  if(s.q)h+='<blockquote>'+(s.a?'(':'«')+s.q+(s.a?')':'»')+'</blockquote>';
  if(s.t)h+='<p class="body">'+s.t+'</p>';
  if(s.post)h+='<p class="post">'+s.post+'</p>';return h}
-function introSched(){clearTimeout(iTm);var pb=$('prog');pb.style.animation='none';void pb.offsetWidth;
- if(!iPlaying||$('intro').classList.contains('hide'))return;
+/* تتغير الشرائح (المقدمة والأحاديث والآثار والشعر) تلقائيًا؛ مدة كل شريحة بقدر طول نصها */
+function introSched(){clearTimeout(iTm);
+ if($('intro').classList.contains('hide'))return;
  var ms=Math.min(28000,6000+$('slide').textContent.length*40);
- pb.style.animation='fill '+ms+'ms linear forwards';iTm=setTimeout(function(){introGo(iSi+1,1)},ms)}
-function introGo(i,d){iSi=(i+INTRO_SL.length)%INTRO_SL.length;var el=$('slide');el.classList.remove('in');void el.offsetWidth;
- el.innerHTML=introHTML(LANG==="en"?INTRO_EN[iSi]:INTRO_SL[iSi]);el.style.setProperty('--dx',(-24*(d||1))+'px');el.classList.add('in');
- [].forEach.call($('dots').children,function(b,j){if(j===iSi)b.setAttribute('aria-current','true');else b.removeAttribute('aria-current')});introSched()}
-$('dots').innerHTML='';
-INTRO_SL.forEach(function(s,j){var b=document.createElement('button');b.setAttribute('aria-label','الشريحة '+AR(j+1));b.onclick=function(){introGo(j,j>iSi?1:-1)};$('dots').appendChild(b)});
-$('nextS').onclick=function(){introGo(iSi+1,1)};$('prevS').onclick=function(){introGo(iSi-1,-1)};
-$('playS').onclick=function(){iPlaying=!iPlaying;this.textContent=iPlaying?'❚❚':'▶︎';this.setAttribute('aria-label',iPlaying?'إيقاف مؤقت':'تشغيل');introSched()};
+ iTm=setTimeout(function(){introGo(iSi+1,1)},ms)}
+function introGo(i,d,now){iSi=(i+INTRO_SL.length)%INTRO_SL.length;var el=$('slide');clearTimeout(iFx);
+ function swap(){el.classList.remove('in','out');void el.offsetWidth;
+  el.innerHTML=introHTML(LANG==="en"?INTRO_EN[iSi]:INTRO_SL[iSi]);el.style.setProperty('--dx',(-24*(d||1))+'px');el.classList.add('in');introSched()}
+ if(now||(window.matchMedia&&matchMedia('(prefers-reduced-motion:reduce)').matches))return swap();
+ clearTimeout(iTm);el.style.setProperty('--dx',(-24*(d||1))+'px');el.classList.remove('in');el.classList.add('out');iFx=setTimeout(swap,250)}
 $('themeBtn2').onclick=function(){$('themeBtn').onclick()};
 $('goBtn').onclick=function(){$('intro').classList.add('hide');$('mainWrap').classList.remove('hide');clearTimeout(iTm);scrollTo(0,0)};
 $('homeBtn').onclick=function(){$('mainWrap').classList.add('hide');$('intro').classList.remove('hide');scrollTo(0,0);introSched()};
@@ -948,7 +941,7 @@ $('homeBtn').onclick=function(){$('mainWrap').classList.add('hide');$('intro').c
 document.addEventListener('keydown',function(e){if($('intro').classList.contains('hide'))return;if(e.key==='ArrowLeft')introGo(iSi+1,1);if(e.key==='ArrowRight')introGo(iSi-1,-1)});
 var iTx=null;$('slide').addEventListener('touchstart',function(e){iTx=e.touches[0].clientX},{passive:true});
 $('slide').addEventListener('touchend',function(e){if(iTx===null)return;var dx=e.changedTouches[0].clientX-iTx;iTx=null;if(Math.abs(dx)>50){if(dx<0)introGo(iSi+1,1);else introGo(iSi-1,-1)}});
-segs("dirSeg","dir");segs("unitSeg","unit");fillVals();renderFlex();load();show();introGo(0,1);
+segs("dirSeg","dir");segs("unitSeg","unit");fillVals();renderFlex();load();show();introGo(0,1,1);
 /* reader */
 var SPP=[1,2,45,69,95,115,136,160,169,187,199,212,225,231,237,242,255,266,277,284,294,302,311,319,329,335,345,354,364,371,377,381,383,393,399,404,410,417,422,431,439,445,451,457,460,464,468,472,477,479,482,485,487,490,493,496,499,504,507,510,513,515,516,518,520,522,524,526,529,531,533,534,537,538,540,542,544,545,547,548,550,551,552,553,554,555,556,556,557,559,559,560,561,561,562,562,563,563,564,564,565,565,566,566,566,567,567,567,568,568,568,569,569,569];
 var PDFN=569,R={doc:null,pg:1,mode:'study'};
@@ -1986,7 +1979,7 @@ var iv=setInterval(function(){
 })();
 </script>
 <script src="robot.js?v=4"></script>
-<script src="musammi.js?v=25"></script>
-<script src="ikhtibar.js?v=8"></script>
+<script src="musammi.js?v=26"></script>
+<script src="ikhtibar.js?v=9"></script>
 <script src="mushafi.js?v=5"></script>
 </body></html>
