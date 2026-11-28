@@ -2,6 +2,7 @@
    تُتلى آية بصوت الشيخ محمد صديق المنشاوي (مرتّل)، ثم تبدأ فرصة القارئ ليكمل ما بعدها.
    يُكمل القارئ الآيات التالية كلها دفعة واحدة (عددًا محدّدًا من ١ إلى ٥، أو إلى آخر الصفحة)، ثم تأتي آية جديدة، وهكذا.
    الآيات تُختار عشوائيًا من الصفحات المحفوظة (أجزاء كاملة أو صفحات متفرقة، من خطة المستخدم).
+   تظهر الآيات المطلوبة بشكل صفحة المصحف نفسها (خط الصفحة QPC وأسطرها وألوان التجويد وعلامة رقم الآية) وتنكشف كلمةً كلمة.
    الإصغاء بالمحرّك نفسه الذي يستعمله المسمّع الآلي في «مصحفي» (G.MushafiCore)، فتتساوى الدقة والسرعة.
    يحتاج الإنترنت: الصوت من everyayah.com والتعرّف الصوتي من المتصفح. */
 (function (G) {
@@ -178,7 +179,16 @@
     "#t-test .ik-ay.ok .ikw.on{color:var(--ok)}" +
     "#t-test .ikw.mk{padding:0 2px;font-size:.8em;opacity:.8}#t-test .ik-ay{max-height:55vh;overflow:auto}" +
     "#t-test .ikw.on.x{color:#d93025;background:rgba(217,48,37,.14);box-shadow:0 0 0 1.5px rgba(217,48,37,.6)}" +
-    "@media(prefers-reduced-motion:reduce){#t-test .ikw.on,#t-test .ikw:not(.on).nx{animation:none}}" +
+    "@media(prefers-reduced-motion:reduce){#t-test .ikw.on,#t-test .ikw:not(.on).nx{animation:none}#t-test .ikq .ikg.on i,#t-test .ikq .ikg:not(.on).nx{animation:none}}" +
+    "#t-test .ik-ay.mq{font-size:inherit;line-height:normal;text-align:initial;max-height:none;overflow:visible;min-height:0;padding:0}" +
+    "#t-test .ik-ay.mq.ok .mushaf-frame{border-color:var(--ok)}#t-test .ik-ay.mq.bad .mushaf-frame{border-color:#d93025}" +
+    "#t-test .ikq .ikg{display:block;border-radius:.16em;transition:background .35s,box-shadow .35s}" +
+    "#t-test .ikq .ikg.off{visibility:hidden}" +
+    "#t-test .ikq .ikg i{display:block;font-style:normal}" +
+    "#t-test .ikq .ikg:not(.on):not(.off){background:var(--acc2)}#t-test .ikq .ikg:not(.on) i{opacity:0}" +
+    "#t-test .ikq .ikg:not(.on).nx{animation:ikNx 1.4s ease-in-out infinite}" +
+    "#t-test .ikq .ikg.on i{animation:ikIn .6s cubic-bezier(.22,1.25,.36,1) both}" +
+    "#t-test .ikq .ikg.on.x{background:rgba(217,48,37,.16);box-shadow:0 0 0 1.5px rgba(217,48,37,.65)}" +
     "#t-test .ik-tm{margin-top:10px;height:8px}" +
     "#t-test .ik-row{display:flex;gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line)}" +
     "#t-test .ik-row:last-child{border-bottom:0}" +
@@ -218,43 +228,153 @@
       '<div class="row"><button id="ikSk">لا أعرف</button><button id="ikQt">إنهاء الاختبار</button></div></div>';
   }
 
-  /* الآية تُبنى مرة واحدة، ثم تُكشف كلماتها تباعًا بحركة (دون إعادة رسم، فلا تتكرر الحركة) */
+  /* ===== عرض الآيات بشكل المصحف: خط الصفحة (QPC) وأسطرها وألوان التجويد وعلامة رقم الآية ===== */
+  var PALI = { lazim: [3], wajib: [9], jawaz: [4], madd2: [5], ghunna: [6], gray: [1, 2, 15], tafkhim: [7], qalqala: [8] }, FFC = {};
+  function fontOf(pg, cb) {
+    if (typeof G.tjFont === "function") { try { return G.tjFont(pg, cb); } catch (e) {} }
+    var st = FFC[pg]; if (st === 1) return cb(true); if (st && st.push) { st.push(cb); return; }
+    FFC[pg] = [cb];
+    function fin(ok) { var q = FFC[pg]; FFC[pg] = ok ? 1 : null; q.forEach(function (f) { f(ok); }); }
+    fetch(new URL("fonts/p" + pad3(pg) + ".woff", location.href).href).then(function (r) { if (!r.ok) throw 0; return r.arrayBuffer(); })
+      .then(function (b) { var ff = new FontFace("QPC" + pg, b); return ff.load().then(function () { document.fonts.add(ff); fin(true); }); })
+      .catch(function () { fin(false); });
+  }
+  function fonts(pgs) {
+    return Promise.all(pgs.map(function (p) { return new Promise(function (r) { fontOf(p, r); }); })).then(function (a) {
+      return a.every(Boolean);
+    });
+  }
+  function pagesFor(k1, cnt) {
+    var out = [], p; if (!D) return out;
+    for (p = D.pw[D.as[k1]]; p <= D.pw[D.ae[k1 + cnt - 1] - 1]; p++) out.push(p);
+    return out;
+  }
+  function wordAy() {   /* رقم الآية لكل كلمة في المصحف */
+    if (D.wa) return D.wa;
+    var wa = new Uint16Array(D.V.W.length), k, w;
+    for (k = 0; k < D.as.length; k++) for (w = D.as[k]; w < D.ae[k]; w++) wa[w] = k;
+    return (D.wa = wa);
+  }
+  function palette(pgs, ref) {
+    var rs = getComputedStyle(ref), ink = rs.getPropertyValue("--ink").trim() || "#111", map = { 0: ink }, oc = [], css = "", r, i, col, st = $("ikPal"),
+      plain = !!(G.tjState && G.tjState.hideColors);
+    for (r in PALI) { col = plain ? ink : (rs.getPropertyValue("--tj-" + r).trim() || ink); PALI[r].forEach(function (ix) { map[ix] = col; }); }
+    for (i in map) oc.push(i + " " + map[i]);
+    pgs.forEach(function (p) { css += "@font-palette-values --ikq" + p + "{font-family:QPC" + p + ";base-palette:0;override-colors:" + oc.join(",") + "}"; });
+    if (!st) { st = document.createElement("style"); st.id = "ikPal"; document.head.appendChild(st); }
+    st.textContent = css;
+  }
+  /* ملاءمة عرض أطول سطر لعرض الصفحة (كما في المصحف) ثم إخفاء الأسطر التي لا تخص الأسئلة */
+  function fit(tx) {
+    if (!tx || !tx.isConnected) return;
+    var cs = getComputedStyle(tx), W = tx.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight), mx = 0, lines = tx.querySelectorAll(".qline");
+    if (W <= 0) return;
+    [].forEach.call(lines, function (l) { l.style.display = ""; });
+    tx.style.fontSize = "40px";
+    [].forEach.call(lines, function (l) {
+      var w = 0, n = 0; [].forEach.call(l.querySelectorAll(".qw"), function (x) { w += x.getBoundingClientRect().width; n++; });
+      if (n) { w += (n - 1) * .22 * 40; if (w > mx) mx = w; }
+    });
+    if (mx) tx.style.fontSize = Math.min(40 * W / mx, 64).toFixed(2) + "px";
+    [].forEach.call(lines, function (l) { if (l.getAttribute("data-r") !== "1") l.style.display = "none"; });
+  }
+  /* العرض المصحفي: كل كلمة تقابلها كلمة من خط الصفحة، وتنكشف بحسب تقدّم القارئ */
+  function mushView(P, k1, cnt, box, pgs) {
+    var V = D.V, wa = wordAy(), items = [], h = "", dsp = [], tx;
+    P.ends.forEach(function (e, ix) {
+      var off = ix ? P.ends[ix - 1] : 0;
+      dsp.push(P.disp.filter(function (x) { return !x.mark && x.a >= off && x.b <= e; }));
+    });
+    pgs.forEach(function (pg) {
+      var L = V.L[pg - 1], id = D.pst[pg - 1], mxw = Math.max.apply(null, L);
+      L.forEach(function (v) {
+        if (v <= 0) return;
+        var end = id + v, last = end - 1, kl = wa[last], inr = false, row = "", w, k, g, j, ix, d, m, isM, on, center;
+        for (w = id; w < end; w++) {
+          k = wa[w]; isM = w === D.ae[k] - 1; on = k >= k1 && k < k1 + cnt;
+          if (!on) { row += '<span class="qw ikg off"><i>' + V.W[w] + "</i></span>"; continue; }
+          inr = true; ix = k - k1; d = dsp[ix];
+          if (isM) items.push({ thr: P.ends[ix], a: 0, b: 0, mark: true });
+          else {
+            if (!d.length) throw new Error("no words");
+            g = D.ae[k] - D.as[k] - 1; j = w - D.as[k];
+            m = d.length === g ? j : Math.min(d.length - 1, Math.floor((j + .5) * d.length / g));
+            items.push({ thr: d[m].b, a: d[m].a, b: d[m].b, mark: false });
+          }
+          row += '<span class="qw ikg' + (isM ? " aya-num" : "") + '" data-q="' + (items.length - 1) + '"><i>' + V.W[w] + "</i></span>";
+        }
+        center = pg < 3 || (D.ae[kl] - 1 === last && D.a[kl] === V.SU[D.s[kl] - 1] && v <= mxw * .6);
+        h += '<div class="qline' + (center ? " c" : "") + '" data-r="' + (inr ? 1 : 0) + '" style="font-family:QPC' + pg + ",'Amiri Quran',serif;font-palette:--ikq" + pg + '">' + row + "</div>";
+        id = end;
+      });
+    });
+    box.className = "ik-ay mq";
+    box.innerHTML = '<div class="mushaf-sheet"><div class="mushaf-frame"><div class="mushaf-text ikq">' + h + "</div></div></div>";
+    tx = box.querySelector(".ikq");
+    [].forEach.call(tx.querySelectorAll("[data-q]"), function (e) { items[+e.getAttribute("data-q")].el = e; });
+    palette(pgs, tx); fit(tx);
+    try { document.fonts.ready.then(function () { fit(tx); }); } catch (e) {}
+    setTimeout(function () { fit(tx); }, 200);
+    return items;
+  }
+  /* الاحتياط إن تعذّر خط الصفحة: النص العادي */
   function build(P) {
     return P.disp.map(function (w, i) { return '<span class="ikw' + (w.mark ? " mk" : "") + '" data-i="' + i + '">' + esc(w.raw) + "</span>"; }).join(" ");
   }
-  function paint(P, eng, mark, box) {
-    var els = box.querySelectorAll(".ikw"), i, j, w, first = -1, bad;
-    for (i = 0; i < P.disp.length; i++) {
-      w = P.disp[i];
-      if (w.b <= eng.p && !els[i].classList.contains("on")) els[i].classList.add("on");
-      if (first < 0 && w.b > eng.p && !w.mark) first = i;
-      if (!w.mark && els[i].classList.contains("on") && !els[i].classList.contains("x")) { bad = false; for (j = w.a; j < w.b; j++) if (mark[j] === 2) bad = true; if (bad) els[i].classList.add("x"); }
+  function textView(P, box) {
+    box.className = "ik-ay"; box.innerHTML = build(P);
+    var els = box.querySelectorAll(".ikw");
+    return P.disp.map(function (w, i) { return { el: els[i], thr: w.b, a: w.a, b: w.b, mark: !!w.mark }; });
+  }
+  /* يُعرض المطلوب بشكل المصحف (وإلا نصًا عاديًا) ويُرجع عناصره لتُكشف تباعًا */
+  function showView(P, k1, cnt) {
+    var box = $("ikAy"); if (!box) return Promise.resolve([]);
+    return fonts(pagesFor(k1, cnt)).then(function (ok) {
+      box = $("ikAy"); if (!box) return [];
+      if (ok && D) { try { return mushView(P, k1, cnt, box, pagesFor(k1, cnt)); } catch (e) {} }
+      return textView(P, box);
+    });
+  }
+  function paint(items, eng, mark, box) {
+    var i, j, it, first = -1, bad;
+    for (i = 0; i < items.length; i++) {
+      it = items[i]; if (!it.el) continue;
+      if (it.thr <= eng.p && !it.el.classList.contains("on")) it.el.classList.add("on");
+      if (first < 0 && it.thr > eng.p && !it.mark) first = i;
+      if (!it.mark && it.el.classList.contains("on") && !it.el.classList.contains("x")) { bad = false; for (j = it.a; j < it.b; j++) if (mark[j] === 2) bad = true; if (bad) it.el.classList.add("x"); }
     }
     [].forEach.call(box.querySelectorAll(".nx"), function (e) { e.classList.remove("nx"); });
-    if (first >= 0) { els[first].classList.add("nx"); try { if (P.disp.length > 40) els[first].scrollIntoView({ block: "nearest", behavior: "smooth" }); } catch (e) {} }
+    if (first >= 0) { items[first].el.classList.add("nx"); try { if (items.length > 40) items[first].el.scrollIntoView({ block: "nearest", behavior: "smooth" }); } catch (e) {} }
   }
   /* عند الانتهاء: تُكشف الكلمات الباقية تباعًا (بالأحمر إن أخطأ) */
-  function revealRest(P, box, ok) {
-    var els = box.querySelectorAll(".ikw"), d = 0;
+  function revealRest(items, box, ok) {
+    var d = 0;
     [].forEach.call(box.querySelectorAll(".nx"), function (e) { e.classList.remove("nx"); });
-    P.disp.forEach(function (w, i) {
-      if (els[i].classList.contains("on")) return;
-      els[i].style.animationDelay = Math.min(d * 70, 1400) + "ms"; d++;
-      els[i].classList.add("on"); if (!ok) els[i].classList.add("x");
+    items.forEach(function (it) {
+      if (!it.el || it.el.classList.contains("on")) return;
+      (it.el.firstElementChild && it.el.classList.contains("ikg") ? it.el.firstElementChild : it.el).style.animationDelay = Math.min(d * 70, 1400) + "ms"; d++;
+      it.el.classList.add("on"); if (!ok && !it.mark) it.el.classList.add("x");
     });
   }
 
   /* فرصة القارئ لإكمال آية: تُرجع true إن أكملها صحيحة. الإصغاء والمطابقة كلمةً كلمة بمحرّك المسمّع الآلي نفسه */
-  function chance(sid, keys, label) {
+  function chance(sid, keys, label, k1) {
+    var P0 = prepMulti(keys);
+    setSt("🎤 " + label);
+    return showView(P0, k1, keys.length).then(function (items) {
+      if (dead(sid)) return { ok: false, done: 0 };
+      return chanceRun(sid, keys, label, P0, items);
+    });
+  }
+  function chanceRun(sid, keys, label, P, items) {
     return new Promise(function (resolve) {
-      var P = prepMulti(keys), n = P.E.length, allow = allowed(n), start = Date.now(), lim = Math.min(300000, 15000 + 1500 * n),
+      var n = P.E.length, allow = allowed(n), start = Date.now(), lim = Math.min(300000, 15000 + 1500 * n),
         lastT = Date.now(), seen = false, done = false, rec = null, iv = null, mark = [], core = C(), eng = new core.Engine(P.EO, { start: 0 });
-      var box = $("ikAy"); box.className = "ik-ay"; box.innerHTML = build(P); paint(P, eng, mark, box);
-      setSt("🎤 " + label);
+      var box = $("ikAy"); paint(items, eng, mark, box);
       function good() { return eng.p >= n && eng.err <= allow; }
       function finish(ok) {
         if (done) return; done = true; clearInterval(iv); if (rec) rec.stop(); CUR = null;
-        if (!dead(sid)) { box.className = "ik-ay " + (ok ? "ok" : "bad"); revealRest(P, box, ok); }
+        if (!dead(sid)) { box.classList.remove("ok", "bad"); box.classList.add(ok ? "ok" : "bad"); revealRest(items, box, ok); }
         resolve({ ok: ok, done: ok ? keys.length : P.ends.filter(function (e) { return e <= eng.p; }).length });
       }
       CUR = { finish: finish };
@@ -263,7 +383,7 @@
         var out = eng.feed(T0, from, fin);
         if (T0.length > from) { seen = true; lastT = Date.now(); }
         out.ev.forEach(function (v) { mark[v.i] = v.ok ? 1 : 2; if (!v.ok) beep(); });
-        paint(P, eng, mark, box);
+        paint(items, eng, mark, box);
         if (eng.done) finish(good());
         return out;
       }, function (err) {
@@ -286,15 +406,17 @@
     setBar("ikPg", i / T.prompts.length * 100); setBar("ikTm", 0);
     $("ikAy").className = "ik-ay"; $("ikAy").innerHTML = "";
     setSt("🎧 " + gn("استمع", "استمعي") + " إلى الآية…");
+    fonts(pagesFor(pr.k + 1, pr.len)).catch(function () {});   /* تجهيز خطوط الصفحات أثناء تلاوة الآية */
     var heard = await play(pr.k); if (dead(sid)) return;
     if (!heard) {   /* تعذّر الصوت: نعرض نص الآية ليستمر الاختبار */
       setSt("تعذّر تشغيل الصوت، هذه هي الآية:");
-      $("ikAy").className = "ik-ay ok"; $("ikAy").innerHTML = prep(keyOf(pr.k)).disp.map(function (w) { return '<span class="ikw on">' + esc(w.raw) + "</span>"; }).join(" ");
+      var pi = await showView(prepMulti([keyOf(pr.k)]), pr.k, 1); if (dead(sid)) return;
+      pi.forEach(function (it) { if (it.el) it.el.classList.add("on"); }); $("ikAy").classList.add("ok");
       await wait(4500); if (dead(sid)) return;
     }
     for (d = 1; d <= pr.len; d++) keys.push(keyOf(pr.k + d));
     /* الآيات التالية كلها دفعة واحدة، لا آية آية */
-    res = await chance(sid, keys, pr.len > 1 ? gn("أكمل", "أكملي") + " الآيات التي بعدها كلها (" + (pr.len === 2 ? "آيتان" : AR(pr.len) + (pr.len > 10 ? " آية" : " آيات")) + ") دفعة واحدة" : gn("أكمل", "أكملي") + " الآية التي بعدها");
+    res = await chance(sid, keys, pr.len > 1 ? gn("أكمل", "أكملي") + " الآيات التي بعدها كلها (" + (pr.len === 2 ? "آيتان" : AR(pr.len) + (pr.len > 10 ? " آية" : " آيات")) + ") دفعة واحدة" : gn("أكمل", "أكملي") + " الآية التي بعدها", pr.k + 1);
     if (dead(sid) || T.fatal) return;
     done = res.done; pass = res.ok;
     T.res.push({ k: pr.k, len: pr.len, done: done, ok: pass });
