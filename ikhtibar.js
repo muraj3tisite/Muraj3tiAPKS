@@ -1,18 +1,16 @@
-/* اختبار المحفوظ.
-   يقول صوتٌ «أكمل من قوله تعالى»، ثم تُتلى آية بصوت الشيخ محمد صديق المنشاوي (مرتّل)، ثم تبدأ فرصة القارئ ليكمل ما بعدها.
+/* اختباري — اختبار المحفوظ.
+   تُتلى آية بصوت الشيخ محمد صديق المنشاوي (مرتّل)، ثم تبدأ فرصة القارئ ليكمل ما بعدها.
    يُكمل القارئ الآيات التالية كلها دفعة واحدة (عددًا محدّدًا من ١ إلى ٥، أو إلى آخر الصفحة)، ثم تأتي آية جديدة، وهكذا.
    الآيات تُختار عشوائيًا من الصفحات المحفوظة (أجزاء كاملة أو صفحات متفرقة، من خطة المستخدم).
-   يحتاج الإنترنت: الصوت من everyayah.com والتعرّف الصوتي من المتصفح.
-   عبارة «أكمل من قوله تعالى»: إن وُجد الملف audio/akmil.mp3 (تسجيل بصوت شيخ) يُشغَّل، وإلا يُستعمل أفضل صوت عربي في الجهاز. */
+   الإصغاء بالمحرّك نفسه الذي يستعمله المسمّع الآلي في «مصحفي» (G.MushafiCore)، فتتساوى الدقة والسرعة.
+   يحتاج الإنترنت: الصوت من everyayah.com والتعرّف الصوتي من المتصفح. */
 (function (G) {
   "use strict";
-  var M = G.Musammi;
-  if (!M) return;
   var $ = function (i) { return document.getElementById(i); };
   var AUDIO = "https://everyayah.com/data/Minshawy_Murattal_128kbps/";   /* الشيخ محمد صديق المنشاوي (مرتّل)، ملفات SSSAAA.mp3 */
-  var PHRASE_SRC = "audio/akmil.mp3";   /* تسجيل العبارة بصوت شيخ: ضعه بهذا الاسم ليُشغَّل بدل صوت الجهاز */
-  var PHRASE = "أكمل من قوله تعالى";
-  var TOL = .75;
+  var BSMN = "بسم لله لرحمن لرحيم";
+  function C() { return G.MushafiCore || null; }   /* محرّك المسمّع الآلي (يُحمَّل مع mushafi.js) */
+  function nz(s) { var c = C(); return c ? c.norm(s) : ""; }
 
   var CFG = { n: 5, c: 3, m: "count" };   /* عدد الاختبارات (٥–١٠)، وعدد الآيات المطلوب إكمالها في كل اختبار (١–٥)، ونطاق الإكمال: count = عدد آيات، page = إلى آخر الصفحة */
   try { var sv = JSON.parse(localStorage.getItem("ikCfg") || "null"); if (sv && sv.n >= 5 && sv.n <= 10 && sv.c >= 1 && sv.c <= 5) CFG = { n: sv.n, c: sv.c, m: sv.m === "page" ? "page" : "count" }; } catch (e) {}
@@ -80,180 +78,63 @@
     fetch("data/quran-text.json").then(function (r) { if (!r.ok) throw 0; return r.json(); }).then(function (j) {
       Q = {}; Object.keys(j).forEach(function (k) {
         var t = j[k];
-        if (/:1$/.test(k) && k !== "1:1" && k !== "9:1") { var w = M.norm(t).split(" "); if (M.isBsm(w) && w.length > 4) t = t.trim().split(/\s+/).slice(4).join(" "); }
+        if (/:1$/.test(k) && k !== "1:1" && k !== "9:1") { var w = t.trim().split(/\s+/); if (w.length > 4 && nz(w.slice(0, 4).join(" ")) === BSMN) t = w.slice(4).join(" "); }
         Q[k] = t;
       });
       cb(true);
     }).catch(function () { cb(false); });
   }
-  /* الآية: كلمات العرض + الكلمات المتوقعة (مطبَّعة) + الحروف المقطّعة إن بدأت بها */
+  /* الآية: كلمات العرض + الكلمات المتوقعة (مطبَّعة) */
   function prep(key) {
     var raw = String(Q[key] || "").trim().split(/\s+/), disp = [], E = [];
     raw.forEach(function (w) {
-      var n = M.norm(w);
+      var n = nz(w);
       if (!n) { if (disp.length) disp[disp.length - 1].raw += " " + w; return; }   /* علامات الوقف تلتصق بما قبلها */
       var tk = n.split(" ").filter(Boolean), it = { raw: w, a: E.length };
       tk.forEach(function (t) { E.push(t); }); it.b = E.length; disp.push(it);
     });
-    var muq = null;
-    if ((/:1$/.test(key) || key === "42:2") && E.length && M.muqOf) { var m = M.muqOf(E[0]); if (m) { E[0] = m; muq = m.split(""); } }
-    return { disp: disp, E: E, muq: muq };
+    return { disp: disp, E: E };
   }
-  /* عدة آيات متتالية كمقطع واحد: بين كل آيتين علامة رقم الآية، ويُحسب لكل آية نهاية (ends) لمعرفة كم آية أكمل القارئ */
+  /* عدة آيات متتالية كمقطع واحد: بين كل آيتين علامة رقم الآية، ويُحسب لكل آية نهاية (ends) لمعرفة كم آية أكمل القارئ.
+     EO: كلمات المقطع بالصيغة التي يفهمها محرّك المسمّع الآلي (n = الكلمة، af = أول كلمة في الآية، mq = حروف مقطّعة) */
   function prepMulti(keys) {
-    var P = prep(keys[0]), ends = [P.E.length], i, Pn, off, nk;
-    for (i = 1; i < keys.length; i++) {
-      Pn = prep(keys[i]); off = P.E.length;
-      P.disp.push({ raw: "﴿" + AR(+keys[i - 1].split(":")[1]) + "﴾", a: off, b: off, mark: true });
+    var P = { disp: [], E: [], EO: [], ends: [] }, i, Pn, off, sa;
+    keys.forEach(function (key, ix) {
+      Pn = prep(key); off = P.E.length; sa = key.split(":");
+      if (ix > 0) P.disp.push({ raw: "﴿" + AR(+keys[ix - 1].split(":")[1]) + "﴾", a: off, b: off, mark: true });
       Pn.disp.forEach(function (w) { P.disp.push({ raw: w.raw, a: w.a + off, b: w.b + off }); });
-      Pn.E.forEach(function (t) { P.E.push(t); });
-      ends.push(P.E.length);
-    }
-    P.ends = ends; return P;
+      Pn.E.forEach(function (t, j) { P.E.push(t); P.EO.push({ n: t, s: +sa[0], a: +sa[1], key: key, af: j === 0, fz: false, mq: j === 0 && +sa[0] === 42 && +sa[1] === 2 }); });
+      P.ends.push(P.E.length);
+    });
+    return P;
   }
 
-  /* ===== المطابقة: كلمات الآية بالترتيب، مع تسامح بسيط مع أخطاء التعرّف ===== */
-  function allowed(n) { return n < 15 ? 0 : (n < 30 ? 1 : (n < 60 ? 2 : (n < 100 ? 3 : 4))); }   /* لا تسامح في القصير؛ وكلما طال المقطع سُمح بخطأ أو أكثر تحسّبًا لأخطاء التعرّف */
-  function align(E, S, muq) {
-    var n = E.length, p = 0, i = 0, miss = 0, q, ok;
-    while (i < S.length && p < n) {
-      if (p === 0 && muq) {
-        if (M.wsim(E[0], S[i]) >= TOL) { p = 1; i++; continue; }
-        ok = true; for (q = 0; q < muq.length; q++) if (!M.nameOk(muq[q], S[i + q])) { ok = false; break; }
-        if (ok) { p = 1; i += muq.length; continue; }
-        i++; continue;
-      }
-      if (M.wsim(E[p], S[i]) >= TOL) { p++; i++; continue; }
-      /* كلمة بدل كلمة: التالية تطابق ما بعدها */
-      if (S[i + 1] !== undefined && p + 1 < n && M.wsim(E[p + 1], S[i + 1]) >= TOL) { miss++; p++; i++; continue; }
-      /* كلمة ناقصة: ما نُطق يطابق الكلمة التي بعدها */
-      if (p + 1 < n && M.wsim(E[p + 1], S[i]) >= TOL && (S[i + 1] === undefined || p + 2 >= n || M.wsim(E[p + 2], S[i + 1]) >= TOL)) { miss++; p += 2; i++; continue; }
-      i++;   /* كلام زائد أو ضجيج */
-    }
-    return { p: Math.min(p, n), miss: miss };
-  }
-
-  /* ===== التعرّف الصوتي (عبر الإنترنت) ===== */
-  function toks(s) { var n = M.norm(s); return n ? n.split(" ") : []; }
-  /* يرسل كل نتيجة (مؤقتة أو نهائية) كما هي مع ثقة التعرّف: cb(tokens, isFinal, confidence).
-     وبين بدائل التعرّف يختار الأوفق لما قيل قبلها */
-  function listen(E, muq, cb, onErr) {
-    var SR = G.SpeechRecognition || G.webkitSpeechRecognition; if (!SR) return null;
-    var r = new SR(), fin = [], active = true;
-    r.lang = "ar-SA"; r.continuous = true; r.interimResults = true; r.maxAlternatives = 3;
-    try { if ("processLocally" in r) r.processLocally = false; } catch (e) {}
+  /* ===== المطابقة والتعرّف الصوتي =====
+     التسامح مع أخطاء التعرّف: لا خطأ في المقطع القصير، وكلما طال سُمح بخطأ أو أكثر. */
+  function allowed(n) { return n < 15 ? 0 : (n < 30 ? 1 : (n < 60 ? 2 : (n < 100 ? 3 : 4))); }
+  /* التعرّف الصوتي بنفس إعدادات المسمّع الآلي: نتائج مؤقتة ونهائية، وكل نتيجة تُعالَج من حيث وصلنا (cons) فلا تتأخر الكلمات.
+     onRes(tokens, from, isFinal) تعيد {used} */
+  function listen(onRes, onErr) {
+    var SR = G.SpeechRecognition || G.webkitSpeechRecognition, c = C(); if (!SR || !c) return null;
+    var r, active = true, cons = {};
+    try { r = new SR(); } catch (e) { return null; }
+    r.lang = "ar-SA"; r.continuous = true; r.interimResults = true; r.maxAlternatives = 1;
     r.onresult = function (e) {
+      if (!active) return;
       for (var i = e.resultIndex; i < e.results.length; i++) {
-        var res = e.results[i], best = [], bs = -1, bc = 1, k, tk, sc;
-        for (k = 0; k < res.length; k++) { tk = toks(res[k].transcript); sc = align(E, fin.concat(tk), muq).p; if (sc > bs) { bs = sc; best = tk; bc = res[k].confidence > 0 ? res[k].confidence : 1; } }
-        if (res.isFinal) fin = fin.concat(best);
-        cb(best, !!res.isFinal, bc);
+        var res = e.results[i], fin = !!res.isFinal, T0 = c.tokenize((res[0] && res[0].transcript) || ""), from = cons[i] || 0, out = onRes(T0, from, fin);
+        cons[i] = fin ? T0.length : from + (out ? out.used : 0);
+        if (!active) return;
       }
     };
-    r.onerror = function (e) { if (e.error === "not-allowed" || e.error === "service-not-allowed" || e.error === "network" || e.error === "language-not-supported") { active = false; onErr(e.error); } };
-    r.onend = function () { if (active) setTimeout(function () { if (active) { try { r.start(); } catch (e) {} } }, 200); };
+    r.onerror = function (e) { if (e && (e.error === "not-allowed" || e.error === "service-not-allowed" || e.error === "network" || e.error === "language-not-supported")) { active = false; onErr(e.error); } };
+    r.onend = function () { if (active) { cons = {}; setTimeout(function () { if (active) { try { r.start(); } catch (e) {} } }, 150); } };
     try { r.start(); } catch (e) { return null; }
-    return { stop: function () { active = false; try { r.abort(); } catch (e) {} } };
-  }
-
-  /* ===== المتتبّع الصارم، كلمةً كلمة كما في المسمّع الآلي =====
-     كل كلمة متوقعة لا بد أن تُنطق بالترتيب. الكلمة الخاطئة لا تُكشف وتُصدر صافرة،
-     والكلمات المتخطّاة تُكشف بالأحمر. لا يُحكم بالخطأ على كلام مؤقت إلا إذا ثبت في تحديثين،
-     ولا على كلام ضعيف الثقة، فلا يُظلم القارئ بخطأ في التعرّف. */
-  var STOL = .5;
-  function wm(a, b) { return !!a && !!b && M.wsim(a, b) >= TOL; }
-  function softm(a, b) { return !!a && !!b && a.replace(/ا/g, "").length >= 3 && M.wsim(a, b) >= STOL; }
-  function bsmAt(T, j) { return T.length - j >= 4 && M.isBsm(T.slice(j, j + 4)); }
-  function tracker(P, beep) {
-    var E = P.E, n = E.length, muq = P.muq;
-    var t = { pos: 0, j: 0, errs: 0, erred: false, sus: "", fin: [], fc: [], itx: [], bad: [] };
-    function tryAt(p, T, j) {
-      if (p >= n || j >= T.length) return null;
-      if (p === 0 && muq) {
-        if (wm(E[0], T[j])) return { tok: 1, adv: 1 };
-        if (T.length - j < muq.length) return null;
-        for (var q = 0; q < muq.length; q++) if (!M.nameOk(muq[q], T[j + q])) return null;
-        return { tok: muq.length, adv: 1 };
-      }
-      if (wm(E[p], T[j])) return { tok: 1, adv: 1 };
-      if (T[j + 1]) { var c = T[j] + T[j + 1]; if (c.length >= 6 && M.wsim(E[p], c) >= .85) return { tok: 2, adv: 1 }; }   /* دمج في التعرّف */
-      if (p + 1 < n && (E[p] + E[p + 1]).length >= 8 && M.wsim(E[p] + E[p + 1], T[j]) >= .88) return { tok: 1, adv: 2 };     /* فصل في التعرّف */
-      return null;
-    }
-    function resync(T, j, final) {
-      for (var k = 1; k <= 6; k++) {
-        var p = t.pos + k; if (p >= n) break;
-        if (E[p].replace(/ا/g, "").length < 3) continue;
-        var r = tryAt(p, T, j); if (!r) continue;
-        if (T[j + r.tok] !== undefined) { if (p + r.adv < n && !tryAt(p + r.adv, T, j + r.tok)) continue; }
-        else if (!final || E[p].replace(/ا/g, "").length < 4) continue;
-        return { p: p, r: r };
-      }
-      return null;
-    }
-    t.feed = function (tk, isFin, conf) {
-      var c = conf > 0 ? conf : 1;
-      if (isFin) { tk.forEach(function () { t.fc.push(c); }); t.fin = t.fin.concat(tk); t.itx = []; } else t.itx = tk;
-      t.step(isFin);
-    };
-    t.step = function (final) {
-      var T = t.fin.concat(t.itx), avail, stable, r, r2, rs, guard = 400, w;
-      if (t.j > T.length) t.j = T.length;
-      while (t.pos < n && guard--) {
-        avail = T.length - t.j; stable = final ? avail : avail - 1;   /* آخر كلمة مؤقتة قد تتغيّر */
-        if (stable <= 0) break;
-        if (t.pos === 0 && E[0] !== "بسم" && bsmAt(T, t.j)) { t.j += 4; continue; }   /* بسملة قبل الآية لا تُحتسب */
-        r = tryAt(t.pos, T, t.j);
-        if (r) { t.pos += r.adv; t.j += r.tok; t.erred = false; continue; }
-        /* بعض أسماء الحروف المقطّعة فقط: ننتظر الباقي */
-        if (t.pos === 0 && muq && T.length - t.j < muq.length) {
-          var pre = true; for (w = 0; w < T.length - t.j; w++) if (!M.nameOk(muq[w], T[t.j + w])) { pre = false; break; }
-          if (pre) break;
-        }
-        /* تكرار الكلمة السابقة (تردّد) ليس خطأً */
-        if (t.pos > 0 && wm(E[t.pos - 1], T[t.j])) { t.j++; continue; }
-        /* كلمة شوّهها التعرّف وتليها الكلمة التالية الصحيحة: تُقبل */
-        if (!(t.pos === 0 && muq) && softm(E[t.pos], T[t.j])) {
-          if (T[t.j + 1] === undefined && !final) break;
-          r2 = tryAt(t.pos + 1, T, t.j + 1);
-          if (r2) { t.pos++; t.j++; t.erred = false; continue; }
-        }
-        if (!final && avail < 3) break;   /* لا يُحكم بالخطأ قبل ثلاث كلمات أو سكوت */
-        if ((t.j < t.fin.length ? (t.fc[t.j] || 1) : 1) < .5) { t.j++; continue; }   /* ثقة ضعيفة: نتجاوز بصمت */
-        if (!final) { var key = t.pos + "|" + T[t.j]; if (t.sus !== key) { t.sus = key; break; } }   /* يجب أن يثبت الاختلاف في تحديثين */
-        rs = resync(T, t.j, final);
-        if (rs) {
-          t.bad.push([t.pos, rs.p]);
-          if (!t.erred) { t.errs++; beep(); }
-          t.pos = rs.p + rs.r.adv; t.j += rs.r.tok; t.erred = false; continue;
-        }
-        if (!t.erred) { t.erred = true; t.errs++; beep(); }   /* صافرة واحدة لكل خطأ، والكلمة لا تُكشف */
-        t.j++;
-      }
-    };
-    return t;
+    return { stop: function () { active = false; try { r.onend = null; r.onresult = null; r.onerror = null; r.abort ? r.abort() : r.stop(); } catch (e) {} } };
   }
 
   /* ===== الصوت: عبارة الطلب (تسجيل أو نطق المتصفح) وتلاوة الشيخ المنشاوي ===== */
-  var AU = null, PHRASE_OK = true;
-  /* أفضل صوت عربي في الجهاز: نفضّل الذكر والأصوات الأعلى جودة */
-  function arVoice() {
-    var ss = G.speechSynthesis, vs = ss && ss.getVoices ? ss.getVoices().filter(function (v) { return /^ar/i.test(v.lang); }) : [];
-    if (!vs.length) return null;
-    var pref = [/majed|maged|tarik|tariq|hamed|naayf|male/i, /google|enhanced|premium|neural|natural/i];
-    for (var i = 0; i < pref.length; i++) { var f = vs.filter(function (v) { return pref[i].test(v.name); }); if (f.length) return f[0]; }
-    return vs[0];
-  }
-  function say(t) {
-    return new Promise(function (res) {
-      var ss = G.speechSynthesis; if (!ss || typeof G.SpeechSynthesisUtterance === "undefined") return res(false);
-      var vs = ss.getVoices ? ss.getVoices() : [];
-      if (vs.length && !vs.some(function (v) { return /^ar/i.test(v.lang); })) return res(false);   /* لا صوت عربي في الجهاز */
-      var u = new G.SpeechSynthesisUtterance(t), d = false, f = function () { if (!d) { d = true; res(true); } }, v = arVoice();
-      u.lang = "ar-SA"; if (v) u.voice = v; u.rate = .82; u.pitch = .8; u.volume = 1; u.onend = f; u.onerror = f; setTimeout(f, 7000);
-      try { ss.cancel(); ss.speak(u); } catch (e) { f(); }
-    });
-  }
+  var AU = null, ACX = null;
   function playSrc(src, maxMs) {
     return new Promise(function (res) {
       var d = false, f = function (v) { if (!d) { d = true; res(v); } };
@@ -264,18 +145,16 @@
     });
   }
   function play(k) { return playSrc(AUDIO + pad3(D.s[k]) + pad3(D.a[k]) + ".mp3"); }
-  /* عبارة «أكمل من قوله تعالى»: التسجيل الحقيقي إن وُجد (audio/akmil.mp3)، وإلا صوت الجهاز العربي */
-  function sayPhrase() {
-    if (!PHRASE_OK) return say(PHRASE);
-    return playSrc(PHRASE_SRC, 15000).then(function (ok) { if (ok) return true; PHRASE_OK = false; return say(PHRASE); });
-  }
-  function silence() { try { if (AU) { AU.onended = null; AU.onerror = null; AU.pause(); } } catch (e) {} try { G.speechSynthesis && G.speechSynthesis.cancel(); } catch (e) {} }
+  function silence() { try { if (AU) { AU.onended = null; AU.onerror = null; AU.pause(); } } catch (e) {} }
   /* صافرة الخطأ: نفسها صافرة المسمّع الآلي */
+  function ac() {
+    try { var a = (G.MusammiAC && G.MusammiAC()) || ACX || (ACX = new (G.AudioContext || G.webkitAudioContext)()); ACX = a; if (a.state === "suspended") a.resume(); return a; } catch (e) { return null; }
+  }
   var BEEPT = 0;
   function beep() {
     var n = Date.now(); if (n - BEEPT < 600) return; BEEPT = n;
     try {
-      var a = G.MusammiAC && G.MusammiAC(); if (!a) return;
+      var a = ac(); if (!a) return;
       var t = a.currentTime, o = a.createOscillator(), g = a.createGain();
       o.type = "sawtooth"; o.frequency.setValueAtTime(230, t); o.frequency.linearRampToValueAtTime(140, t + .3);
       g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(.28, t + .03); g.gain.exponentialRampToValueAtTime(.0001, t + .34);
@@ -317,8 +196,8 @@
     var R = D && memRange(), seg1 = "", seg2 = "", i, cl = ["آية", "آيتان", "٣ آيات", "٤ آيات", "٥ آيات"], pm = CFG.m === "page";
     for (i = 5; i <= 10; i++) seg1 += '<button data-n="' + i + '" aria-pressed="' + (CFG.n === i) + '">' + AR(i) + "</button>";
     for (i = 1; i <= 5; i++) seg2 += '<button data-c="' + i + '" aria-pressed="' + (CFG.c === i) + '">' + cl[i - 1] + "</button>";
-    el.innerHTML = '<div class="card"><h2>اختبار محفوظي</h2>' +
-      '<p class="sub">يقول لك الصوت «' + PHRASE + '» ثم تُتلى آية بصوت الشيخ محمد صديق المنشاوي. ' + gn("أكمل", "أكملي") + ' ما بعدها من حفظك، الآيات التالية كلها دفعة واحدة، فإن أصبتَ ظهرت كلها، ثم تأتي آية جديدة.</p>' +
+    el.innerHTML = '<div class="card"><h2>اختباري</h2>' +
+      '<p class="sub">تُتلى عليك آية بصوت الشيخ محمد صديق المنشاوي، ثم ' + gn("أكمل", "أكملي") + ' ما بعدها من حفظك، الآيات التالية كلها دفعة واحدة، فإن أصبتَ ظهرت كلها، ثم تأتي آية جديدة.</p>' +
       (msg ? '<p class="warn" role="alert">' + esc(msg) + "</p>" : "") +
       (R ? '<p class="sub" style="margin-top:8px">من محفوظك: ' + esc(G.MPlan && G.MPlan.summary ? G.MPlan.summary() : AR(R.pages) + " صفحة") + ".</p>"
          : '<p class="warn">حدّد حفظك أولًا من «اليوم ← تعديل موضع حفظي» ليُختار الاختبار من محفوظك.</p>') +
@@ -343,19 +222,19 @@
   function build(P) {
     return P.disp.map(function (w, i) { return '<span class="ikw' + (w.mark ? " mk" : "") + '" data-i="' + i + '">' + esc(w.raw) + "</span>"; }).join(" ");
   }
-  function paint(P, tr, box) {
-    var els = box.querySelectorAll(".ikw"), i, w, first = -1;
+  function paint(P, eng, mark, box) {
+    var els = box.querySelectorAll(".ikw"), i, j, w, first = -1, bad;
     for (i = 0; i < P.disp.length; i++) {
       w = P.disp[i];
-      if (w.b <= tr.pos && !els[i].classList.contains("on")) els[i].classList.add("on");
-      if (first < 0 && w.b > tr.pos && !w.mark) first = i;
+      if (w.b <= eng.p && !els[i].classList.contains("on")) els[i].classList.add("on");
+      if (first < 0 && w.b > eng.p && !w.mark) first = i;
+      if (!w.mark && els[i].classList.contains("on") && !els[i].classList.contains("x")) { bad = false; for (j = w.a; j < w.b; j++) if (mark[j] === 2) bad = true; if (bad) els[i].classList.add("x"); }
     }
-    tr.bad.forEach(function (r) { for (i = 0; i < P.disp.length; i++) if (!P.disp[i].mark && P.disp[i].a >= r[0] && P.disp[i].b <= r[1]) { els[i].classList.add("on", "x"); } });
     [].forEach.call(box.querySelectorAll(".nx"), function (e) { e.classList.remove("nx"); });
     if (first >= 0) { els[first].classList.add("nx"); try { if (P.disp.length > 40) els[first].scrollIntoView({ block: "nearest", behavior: "smooth" }); } catch (e) {} }
   }
   /* عند الانتهاء: تُكشف الكلمات الباقية تباعًا (بالأحمر إن أخطأ) */
-  function revealRest(P, tr, box, ok) {
+  function revealRest(P, box, ok) {
     var els = box.querySelectorAll(".ikw"), d = 0;
     [].forEach.call(box.querySelectorAll(".nx"), function (e) { e.classList.remove("nx"); });
     P.disp.forEach(function (w, i) {
@@ -365,26 +244,28 @@
     });
   }
 
-  /* فرصة القارئ لإكمال آية: تُرجع true إن أكملها صحيحة، كلمةً كلمة وبصرامة */
+  /* فرصة القارئ لإكمال آية: تُرجع true إن أكملها صحيحة. الإصغاء والمطابقة كلمةً كلمة بمحرّك المسمّع الآلي نفسه */
   function chance(sid, keys, label) {
     return new Promise(function (resolve) {
       var P = prepMulti(keys), n = P.E.length, allow = allowed(n), start = Date.now(), lim = Math.min(300000, 15000 + 1500 * n),
-        lastLen = 0, lastT = Date.now(), done = false, rec = null, iv = null, qt = null, tr = tracker(P, beep);
-      var box = $("ikAy"); box.className = "ik-ay"; box.innerHTML = build(P); paint(P, tr, box);
+        lastT = Date.now(), seen = false, done = false, rec = null, iv = null, mark = [], core = C(), eng = new core.Engine(P.EO, { start: 0 });
+      var box = $("ikAy"); box.className = "ik-ay"; box.innerHTML = build(P); paint(P, eng, mark, box);
       setSt("🎤 " + label);
-      function good() { return tr.pos >= n && tr.errs <= allow; }
+      function good() { return eng.p >= n && eng.err <= allow; }
       function finish(ok) {
-        if (done) return; done = true; clearInterval(iv); clearTimeout(qt); if (rec) rec.stop(); CUR = null;
-        if (!dead(sid)) { box.className = "ik-ay " + (ok ? "ok" : "bad"); revealRest(P, tr, box, ok); }
-        resolve({ ok: ok, done: ok ? keys.length : P.ends.filter(function (e) { return e <= tr.pos; }).length });
+        if (done) return; done = true; clearInterval(iv); if (rec) rec.stop(); CUR = null;
+        if (!dead(sid)) { box.className = "ik-ay " + (ok ? "ok" : "bad"); revealRest(P, box, ok); }
+        resolve({ ok: ok, done: ok ? keys.length : P.ends.filter(function (e) { return e <= eng.p; }).length });
       }
       CUR = { finish: finish };
-      rec = listen(P.E, P.muq, function (tk, isFin, conf) {
-        if (done) return;
-        tr.feed(tk, isFin, conf); paint(P, tr, box);
-        var len = tr.fin.length + tr.itx.length; if (len !== lastLen) { lastLen = len; lastT = Date.now(); }
-        if (tr.pos >= n) return finish(good());
-        clearTimeout(qt); qt = setTimeout(function () { if (done) return; tr.step(true); paint(P, tr, box); if (tr.pos >= n) finish(good()); }, 1000);   /* بعد وقفة قصيرة نحسم آخر كلمة */
+      rec = listen(function (T0, from, fin) {
+        if (done) return { used: 0 };
+        var out = eng.feed(T0, from, fin);
+        if (T0.length > from) { seen = true; lastT = Date.now(); }
+        out.ev.forEach(function (v) { mark[v.i] = v.ok ? 1 : 2; if (!v.ok) beep(); });
+        paint(P, eng, mark, box);
+        if (eng.done) finish(good());
+        return out;
       }, function (err) {
         T && (T.fatal = err === "not-allowed" || err === "service-not-allowed" ? "اسمح للموقع باستخدام الميكروفون ثم أعد المحاولة."
           : "تعذّر التعرّف الصوتي. تأكد من اتصالك بالإنترنت ثم أعد المحاولة.");
@@ -393,7 +274,7 @@
       if (!rec) { T && (T.fatal = "هذا المتصفح لا يدعم التعرّف الصوتي. استخدم Chrome أو Edge أو Safari."); return finish(false); }
       iv = setInterval(function () {
         var el = Date.now() - start; setBar("ikTm", 100 - el / lim * 100);
-        if (el > lim || (lastLen > 0 && Date.now() - lastT > (n > 40 ? 7000 : 5500))) finish(good());
+        if (el > lim || (seen && Date.now() - lastT > (n > 40 ? 7000 : 5500))) finish(good());
       }, 250);
     });
   }
@@ -404,8 +285,6 @@
     $("ikSc").textContent = "الصحيح: " + AR(T.score) + " من " + AR(i);
     setBar("ikPg", i / T.prompts.length * 100); setBar("ikTm", 0);
     $("ikAy").className = "ik-ay"; $("ikAy").innerHTML = "";
-    setSt("🔊 " + PHRASE + "…");
-    await sayPhrase(); if (dead(sid)) return;
     setSt("🎧 " + gn("استمع", "استمعي") + " إلى الآية…");
     var heard = await play(pr.k); if (dead(sid)) return;
     if (!heard) {   /* تعذّر الصوت: نعرض نص الآية ليستمر الاختبار */
@@ -426,7 +305,7 @@
       await play(failK); if (dead(sid)) return;
     }
     $("ikSc").textContent = "الصحيح: " + AR(T.score) + " من " + AR(i + 1);
-    await wait(1500);
+    await wait(1200);
   }
 
   async function runSession() {
@@ -459,8 +338,8 @@
     /* تهيئة الصوت داخل نقرة المستخدم (تشترطه بعض المتصفحات) */
     if (!AU) AU = new Audio();
     try { AU.src = "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA="; var pp = AU.play(); if (pp && pp.catch) pp.catch(function () {}); } catch (e) {}
-    try { if (G.speechSynthesis && G.SpeechSynthesisUtterance) { G.speechSynthesis.speak(new G.SpeechSynthesisUtterance("")); G.speechSynthesis.getVoices(); } } catch (e) {}
-    try { G.MusammiAC && G.MusammiAC(); } catch (e) {}   /* تهيئة صافرة الخطأ داخل النقرة */
+    ac();   /* تهيئة صافرة الخطأ داخل النقرة */
+    if (!C()) return renderSetup("تعذّر تحميل محرّك الإصغاء. أعد فتح التطبيق ثم حاول مجددًا.");
     loadText(function (ok) {
       if (!ok) return renderSetup("ملف النص غير موجود: ضع data/quran-text.json.");
       var pr = pick(CFG.n, CFG.c, R, CFG.m);
@@ -485,6 +364,6 @@
   G.Ikhtibar = {
     open: function () { if (!D) D = buildMap(); if (!T) renderSetup(D ? "" : "تعذّر تحميل بيانات المصحف."); },
     leave: function () { if (T) { endSession(); renderSetup(); } },
-    _t: { state: function () { return T; }, align: align, tracker: tracker, prep: prep, prepMulti: prepMulti, pick: pick, buildMap: function () { D = buildMap(); return D; }, memRange: memRange, setText: function (q) { Q = q; }, pageOf: pageOf, keyOf: keyOf }
+    _t: { state: function () { return T; }, prep: prep, prepMulti: prepMulti, pick: pick, buildMap: function () { D = buildMap(); return D; }, memRange: memRange, setText: function (q) { Q = q; }, pageOf: pageOf, keyOf: keyOf }
   };
 })(typeof window !== "undefined" ? window : globalThis);

@@ -1,5 +1,5 @@
 /* غيّر رقم الإصدار عند كل تحديث تنشره: أي تغيير في هذا الملف يُظهر للمستخدمين رسالة «يتوفر تحديث» */
-var VERSION = "1.7.0";
+var VERSION = "1.8.0";
 var CACHE = "murajaati-" + VERSION;
 /* خطوط صفحات المصحف تُحفظ في مخزن دائم لا يُمسح عند تغيير الإصدار، حتى لا تُنزَّل (نحو ١٠٠ ميجا) من جديد */
 var FONTS = "mfonts-v1";
@@ -9,7 +9,7 @@ var EXT = ["fonts.googleapis.com", "fonts.gstatic.com", "cdnjs.cloudflare.com", 
 
 self.addEventListener("install", function (e) {
   e.waitUntil(caches.open(CACHE).then(function (c) {
-    return Promise.all(["./", "manifest.json", "robot.js?v=4", "musammi.js?v=25", "ikhtibar.js?v=4", "mushafi.js?v=4", "data/quran-text.json"].map(function (u) { return c.add(u).catch(function () {}); }));
+    return Promise.all(["./", "manifest.json", "robot.js?v=4", "musammi.js?v=25", "ikhtibar.js?v=5", "mushafi.js?v=5", "data/quran-text.json"].map(function (u) { return c.add(u).catch(function () {}); }));
   }));
 });
 
@@ -69,7 +69,11 @@ self.addEventListener("periodicsync", function (e) {
       return c.match("last").then(function (m) { return m ? m.text() : ""; }).then(function (last) {
         if (last === day) return;
         return self.registration.showNotification("جمعة مباركة", { body: KAHF_BODY, tag: "kahf-friday", icon: "img/icon-192.png", data: { url: "./#kahf" } })
-          .then(function () { return c.put("last", new Response(day)); });
+          .then(function () { return c.put("last", new Response(day)); })
+          /* يبقى الإشعار خمس ثوانٍ ثم يُغلق */
+          .then(function () { return new Promise(function (r) { setTimeout(r, 5000); }); })
+          .then(function () { return self.registration.getNotifications({ tag: "kahf-friday" }); })
+          .then(function (l) { l.forEach(function (n) { n.close(); }); });
       });
     });
   })());
