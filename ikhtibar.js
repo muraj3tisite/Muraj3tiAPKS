@@ -1,7 +1,8 @@
 /* اختباري — اختبار المحفوظ.
    تُتلى آية بصوت الشيخ محمد صديق المنشاوي (مرتّل)، ثم تبدأ فرصة القارئ ليكمل ما بعدها.
    يُكمل القارئ الآيات التالية كلها دفعة واحدة (عددًا محدّدًا من ١ إلى ٥، أو إلى آخر الصفحة)، ثم تأتي آية جديدة، وهكذا.
-   الآيات تُختار عشوائيًا من الصفحات المحفوظة (أجزاء كاملة أو صفحات متفرقة، من خطة المستخدم).
+   الآيات تُختار عشوائيًا من الصفحات المحفوظة (أجزاء كاملة أو صفحات متفرقة، من خطة المستخدم)،
+   أو من نطاق يحدّده المستخدم: سور، أجزاء، أحزاب، صفحات (من … إلى …)، ويمكن جمع أكثر من نطاق.
    تظهر الآيات المطلوبة بشكل صفحة المصحف نفسها (خط الصفحة QPC وأسطرها وألوان التجويد وعلامة رقم الآية) وتنكشف كلمةً كلمة.
    الإصغاء بالمحرّك نفسه الذي يستعمله المسمّع الآلي في «مصحفي» (G.MushafiCore)، فتتساوى الدقة والسرعة.
    يحتاج الإنترنت: الصوت من everyayah.com والتعرّف الصوتي من المتصفح. */
@@ -14,7 +15,18 @@
   function nz(s) { var c = C(); return c ? c.norm(s) : ""; }
 
   var CFG = { n: 5, c: 3, m: "count" };   /* عدد الاختبارات (٥–١٠)، وعدد الآيات المطلوب إكمالها في كل اختبار (١–٥)، ونطاق الإكمال: count = عدد آيات، page = إلى آخر الصفحة */
-  try { var sv = JSON.parse(localStorage.getItem("ikCfg") || "null"); if (sv && sv.n >= 5 && sv.n <= 10 && sv.c >= 1 && sv.c <= 5) CFG = { n: sv.n, c: sv.c, m: sv.m === "page" ? "page" : "count" }; } catch (e) {}
+  try { var sv = JSON.parse(localStorage.getItem("ikCfg") || "null"); if (sv && sv.n >= 5 && sv.n <= 10 && sv.c >= 1 && sv.c <= 5) CFG = { n: sv.n, c: sv.c, m: sv.m === "page" ? "page" : "count" }; loadScope(sv); } catch (e) {}
+  /* نطاق الاختبار: sc = mine (كل المحفوظ) أو s سور / j أجزاء / h أحزاب / p صفحات. rg: آخر «من–إلى» لكل نوع، ex: نطاقات مضافة [النوع، من، إلى] */
+  function maxOf(t) { return { s: 114, j: 30, h: 60, p: 604 }[t] || 0; }
+  function okRg(t, a, b) { return a === (a | 0) && b === (b | 0) && a >= 1 && a <= b && b <= maxOf(t); }
+  function loadScope(sv) {
+    CFG.sc = "mine"; CFG.rg = { s: [1, 1], j: [30, 30], h: [60, 60], p: [1, 1] }; CFG.ex = [];
+    if (!sv) return;
+    if (maxOf(sv.sc)) CFG.sc = sv.sc;
+    ["s", "j", "h", "p"].forEach(function (t) { var r = sv.rg && sv.rg[t]; if (r && okRg(t, r[0], r[1])) CFG.rg[t] = [r[0], r[1]]; });
+    if (Array.isArray(sv.ex)) CFG.ex = sv.ex.filter(function (x) { return x && okRg(x[0], x[1], x[2]); });
+  }
+  if (!CFG.rg) loadScope(null);
   function saveCfg() { try { localStorage.setItem("ikCfg", JSON.stringify(CFG)); } catch (e) {} }
 
   var AR = function (n) { return String(n).replace(/\d/g, function (d) { return "٠١٢٣٤٥٦٧٨٩"[d]; }); };
@@ -49,6 +61,47 @@
     }
     return list.length ? { ok: okA, list: list, pages: pages.length } : null;
   }
+  /* بداية كل حزب [السورة، الآية] برواية حفص (مصحف المدينة). الجزء حزبان */
+  var HIZB = [[1,1],[2,75],[2,142],[2,203],[2,253],[3,15],[3,93],[3,171],[4,24],[4,88],[4,148],[5,27],[5,82],[6,36],[6,111],[7,1],[7,88],[7,171],[8,41],[9,34],
+    [9,93],[10,26],[11,6],[11,84],[12,53],[13,19],[15,1],[16,51],[17,1],[17,99],[18,75],[20,1],[21,1],[22,1],[23,1],[24,21],[25,21],[26,111],[27,56],[28,51],
+    [29,46],[31,22],[33,31],[34,24],[36,28],[37,145],[39,32],[40,41],[41,47],[43,24],[46,1],[48,18],[51,31],[55,1],[58,1],[62,1],[67,1],[72,1],[78,1],[87,1]];
+  function ayIx(s, a) { var i = 0, k = 0; for (; i < s - 1; i++) k += D.V.SU[i]; return k + a - 1; }
+  function hizbIx(h) { return h > 60 ? D.as.length : ayIx(HIZB[h - 1][0], HIZB[h - 1][1]); }
+  /* آيات نطاق واحد [من، إلى) */
+  function span(t, a, b) {
+    if (t === "s") return [ayIx(a, 1), ayIx(b, D.V.SU[b - 1]) + 1];
+    if (t === "j") return [hizbIx(2 * a - 1), hizbIx(2 * b + 1)];
+    if (t === "h") return [hizbIx(a), hizbIx(b + 1)];
+    var k, lo = -1, hi = -1;
+    for (k = 0; k < D.as.length; k++) if (D.pw[D.as[k]] >= a && D.pw[D.ae[k] - 1] <= b) { if (lo < 0) lo = k; hi = k; }
+    return [Math.max(0, lo), hi + 1];
+  }
+  /* النطاقات المختارة: المضافة ثم المحدّد حاليًا (بلا تكرار) */
+  function chosen() {
+    var cur = [CFG.sc].concat(CFG.rg[CFG.sc]), id = cur.join();
+    return CFG.ex.filter(function (x) { return x.join() !== id; }).concat([cur]);
+  }
+  /* آيات الاختبار: كل المحفوظ، أو اتحاد النطاقات المختارة */
+  function scopeRange() {
+    if (!D) return null;
+    if (CFG.sc === "mine") return memRange();
+    var okA = [], list = [], k;
+    chosen().forEach(function (x) { var r = span(x[0], x[1], x[2]); for (var i = r[0]; i < r[1]; i++) okA[i] = true; });
+    for (k = 0; k < D.as.length; k++) if (okA[k]) list.push(k); else okA[k] = false;
+    return list.length ? { ok: okA, list: list } : null;
+  }
+  function surahName(s) { return (G.SN && G.SN[s - 1]) || sName(s); }
+  function unitName(t, v) {
+    if (t === "s") return surahName(v);
+    if (t === "p") return AR(v);
+    var h = HIZB[(t === "j" ? 2 * v - 1 : v) - 1];
+    return AR(v) + " — " + surahName(h[0]) + " " + AR(h[1]);
+  }
+  function rangeLabel(x) {
+    var t = x[0], a = x[1], b = x[2], one = { s: "سورة", j: "الجزء", h: "الحزب", p: "صفحة" }[t], many = { s: "من سورة", j: "الأجزاء", h: "الأحزاب", p: "الصفحات" }[t];
+    var nm = t === "s" ? surahName : AR;
+    return a === b ? one + " " + nm(a) : many + " " + nm(a) + (t === "s" ? " إلى " : " – ") + nm(b);
+  }
   function pageOf(k) { return D.pw[D.as[k]] || 0; }
   function keyOf(k) { return D.s[k] + ":" + D.a[k]; }
   function sName(s) { return String(D.V.NM[s - 1] || "").replace(/^سُورَةُ\s*/, "") || ("سورة " + AR(s)); }
@@ -57,17 +110,18 @@
   /* اختيار آيات الأسئلة: كل سؤال آية تتبعها آيات من السورة نفسها داخل المحفوظ:
      عددًا محدّدًا (c)، أو (mode = page) كل الآيات التي تبدأ في صفحة الآية حتى آخر الصفحة */
   function pick(n, c, R, mode) {
-    var out = [], used = {}, tries = 0, k, len, j, clash, page = mode === "page", lim = page ? 60 : c;
+    var out = [], used = {}, asked = {}, tries = 0, k, len, j, clash, page = mode === "page", lim = page ? 60 : c;
     while (out.length < n && tries < 1200) {
       tries++;
       k = R.list[Math.floor(Math.random() * R.list.length)];
+      if (asked[k]) continue;                                                     /* لا يتكرر السؤال نفسه ولو ضاق النطاق */
       len = 0;
       while (len < lim && k + len + 1 < D.as.length && R.ok[k + len + 1] && D.s[k + len + 1] === D.s[k] && (!page || pageOf(k + len + 1) === pageOf(k))) len++;
       if (len < 1 || (tries < 600 && (page ? len < 2 : len < c))) continue;   /* نفضّل السلسلة الكاملة أولًا */
       clash = false; for (j = k; j <= k + len; j++) if (used[j]) clash = true;
       if (clash && tries < 900) continue;                                        /* ثم نسمح بالتداخل إن ضاق المحفوظ */
       for (j = k; j <= k + len; j++) used[j] = 1;
-      out.push({ k: k, len: len });
+      asked[k] = 1; out.push({ k: k, len: len });
     }
     return out;
   }
@@ -198,6 +252,9 @@
     "#t-test .ik-row:last-child{border-bottom:0}" +
     "#t-test .ik-no{flex:none;width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;color:#fff;background:var(--ok)}" +
     "#t-test .ik-row.bad .ik-no{background:#d93025}" +
+    "#t-test .ik-ft{display:flex;flex-wrap:wrap;column-gap:10px}#t-test .ik-ft>div{flex:1 1 190px;min-width:0}#t-test .ik-ft select,#t-test .ik-ft input{width:100%}" +
+    "#t-test #ikScope{flex-wrap:nowrap}#t-test #ikScope button{flex:1 1 auto;min-width:0;padding:6px 2px;white-space:nowrap;font-size:14px}" +
+    "#t-test .ik-ex{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}#t-test .ik-ex button{font-size:14px}" +
     "#t-test .ik-big{font-size:44px;font-weight:800;text-align:center;line-height:1.3;margin:6px 0}";
   function css() { if ($("ikCss")) return; var s = document.createElement("style"); s.id = "ikCss"; s.textContent = CSS; document.head.appendChild(s); }
 
@@ -205,21 +262,55 @@
   function setSt(t) { var e = $("ikSt"); if (e) e.textContent = t; }
   function setBar(id, pct) { var e = $(id); if (e) e.style.width = Math.max(0, Math.min(100, pct)) + "%"; }
 
+  function field(id, label, t, v) {
+    var h = "", i;
+    if (t === "p") h = '<input type="number" inputmode="numeric" min="1" max="604" id="' + id + '" value="' + v + '">';
+    else { for (i = 1; i <= maxOf(t); i++) h += '<option value="' + i + '"' + (i === v ? " selected" : "") + ">" + esc((t === "s" ? AR(i) + ". " : "") + unitName(t, i)) + "</option>"; h = '<select id="' + id + '">' + h + "</select>"; }
+    return '<div><label for="' + id + '">' + label + "</label>" + h + "</div>";
+  }
+  function scopeHTML() {
+    var t = CFG.sc, h = '<label>على ماذا تريد الاختبار؟</label><div class="seg" id="ikScope">', r, w;
+    [["mine", "كل محفوظي"], ["s", "سور"], ["j", "أجزاء"], ["h", "أحزاب"], ["p", "صفحات"]].forEach(function (x) { h += '<button data-sc="' + x[0] + '" aria-pressed="' + (t === x[0]) + '">' + x[1] + "</button>"; });
+    h += "</div>";
+    if (t === "mine") return h;
+    r = CFG.rg[t]; w = { s: "سورة", j: "جزء", h: "حزب", p: "صفحة" }[t];
+    h += '<div class="ik-ft">' + field("ikA", "من " + w, t, r[0]) + field("ikB", "إلى " + w, t, r[1]) + "</div>" +
+      '<p class="sub">لاختيار ' + { s: "سورة واحدة", j: "جزء واحد", h: "حزب واحد", p: "صفحة واحدة" }[t] + " اجعل «من» و«إلى» متماثلين.</p>";
+    if (CFG.ex.length) h += '<div class="ik-ex">' + CFG.ex.map(function (x, i) { return '<button data-ex="' + i + '" aria-label="حذف ' + esc(rangeLabel(x)) + '">' + esc(rangeLabel(x)) + " ✕</button>"; }).join("") + "</div>";
+    return h + '<div class="row"><button id="ikAdd">＋ أضف هذا النطاق واختر غيره</button></div>';
+  }
+  /* ملخّص النطاق تحت الاختيار، وتفعيل زر البدء */
+  function paintScope() {
+    var R = scopeRange(), e = $("ikSum"), go = $("ikGo"); if (go) go.disabled = !R; if (!e) return;
+    e.className = R ? "sub" : "warn";
+    if (CFG.sc === "mine") e.textContent = R ? "من محفوظك: " + (G.MPlan && G.MPlan.summary ? G.MPlan.summary() : AR(R.pages) + " صفحة") + "." : "حدّد حفظك أولًا من «اليوم ← تعديل موضع حفظي»، أو اختر سورًا أو أجزاءً أو أحزابًا أو صفحات.";
+    else e.textContent = R ? "ستُختبر في: " + chosen().map(rangeLabel).join("، ") + " (عدد الآيات: " + AR(R.list.length) + ")." : "لا توجد آيات كاملة في هذا النطاق.";
+  }
+  function renderScope() { var e = $("ikScBox"); if (e) { e.innerHTML = scopeHTML(); paintScope(); } }
+  /* تغيير «من» أو «إلى»: يبقى النطاق صحيحًا، واختيار «من» وحده لنطاق مفرد ينقل «إلى» معه */
+  function setRange(which, v) {
+    var t = CFG.sc, r = CFG.rg[t]; if (!r) return;
+    v = Math.round(+v); v = v >= 1 ? Math.min(maxOf(t), v) : r[which];
+    if (which === 0) { if (r[1] === r[0] || r[1] < v) r[1] = v; r[0] = v; }
+    else { r[1] = v; if (r[0] > v) r[0] = v; }
+    $("ikA").value = r[0]; $("ikB").value = r[1]; saveCfg(); paintScope();
+  }
+
   function renderSetup(msg) {
     css(); var el = root(); if (!el) return;
-    var R = D && memRange(), seg1 = "", seg2 = "", i, cl = ["آية", "آيتان", "٣ آيات", "٤ آيات", "٥ آيات"], pm = CFG.m === "page";
+    var seg1 = "", seg2 = "", i, cl = ["آية", "آيتان", "٣ آيات", "٤ آيات", "٥ آيات"], pm = CFG.m === "page";
     for (i = 5; i <= 10; i++) seg1 += '<button data-n="' + i + '" aria-pressed="' + (CFG.n === i) + '">' + AR(i) + "</button>";
     for (i = 1; i <= 5; i++) seg2 += '<button data-c="' + i + '" aria-pressed="' + (CFG.c === i) + '">' + cl[i - 1] + "</button>";
     el.innerHTML = '<div class="card"><h2>اختباري</h2>' +
       '<p class="sub">تُتلى عليك آية بصوت الشيخ محمد صديق المنشاوي، ثم ' + gn("أكمل", "أكملي") + ' ما بعدها من حفظك، الآيات التالية كلها دفعة واحدة، فإن أصبتَ ظهرت كلها، ثم تأتي آية جديدة.</p>' +
       (msg ? '<p class="warn" role="alert">' + esc(msg) + "</p>" : "") +
-      (R ? '<p class="sub" style="margin-top:8px">من محفوظك: ' + esc(G.MPlan && G.MPlan.summary ? G.MPlan.summary() : AR(R.pages) + " صفحة") + ".</p>"
-         : '<p class="warn">حدّد حفظك أولًا من «اليوم ← تعديل موضع حفظي» ليُختار الاختبار من محفوظك.</p>') +
+      (D ? '<div id="ikScBox">' + scopeHTML() + '</div><p id="ikSum" role="status"></p>' : "") +
       '<label>عدد الاختبارات</label><div class="seg" id="ikN">' + seg1 + "</div>" +
       '<label>نطاق الإكمال بعد الآية</label><div class="seg" id="ikM"><button data-m="count" aria-pressed="' + !pm + '">عدد من الآيات</button><button data-m="page" aria-pressed="' + pm + '">إلى آخر الصفحة</button></div>' +
       '<div id="ikCBox"' + (pm ? ' class="hide"' : "") + '><label>عدد الآيات المطلوب إكمالها دفعة واحدة</label><div class="seg" id="ikC">' + seg2 + "</div></div>" +
-      '<div class="row"><button class="p" id="ikGo"' + (R ? "" : " disabled") + ">ابدأ الاختبار</button></div>" +
+      '<div class="row"><button class="p" id="ikGo" disabled>ابدأ الاختبار</button></div>' +
       '<p class="sub" style="margin-top:10px">يحتاج اتصالًا بالإنترنت وإذن الميكروفون.</p></div>';
+    if (D) paintScope();
   }
 
   function renderRun() {
@@ -488,7 +579,7 @@
 
   function start() {
     if (!navigator.onLine) return renderSetup("يحتاج الاختبار اتصالًا بالإنترنت. اتصل ثم أعد المحاولة.");
-    var R = memRange(); if (!R) return renderSetup("حدّد حفظك أولًا من «اليوم ← تعديل موضع حفظي».");
+    var R = scopeRange(); if (!R) return renderSetup(CFG.sc === "mine" ? "حدّد حفظك أولًا من «اليوم ← تعديل موضع حفظي»." : "لا توجد آيات كاملة في هذا النطاق.");
     /* تهيئة الصوت داخل نقرة المستخدم (تشترطه بعض المتصفحات) */
     if (!AU) AU = new Audio();
     try { AU.src = "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA="; var pp = AU.play(); if (pp && pp.catch) pp.catch(function () {}); } catch (e) {}
@@ -497,7 +588,7 @@
     loadText(function (ok) {
       if (!ok) return renderSetup("ملف النص غير موجود: ضع data/quran-text.json.");
       var pr = pick(CFG.n, CFG.c, R, CFG.m);
-      if (!pr.length) return renderSetup("محفوظك قليل لإجراء اختبار. أضف صفحات أكثر ثم أعد المحاولة.");
+      if (!pr.length) return renderSetup(CFG.sc === "mine" ? "محفوظك قليل لإجراء اختبار. أضف صفحات أكثر ثم أعد المحاولة." : "النطاق المختار قصير جدًا لإجراء اختبار. وسّعه ثم أعد المحاولة.");
       T = { prompts: pr, res: [], score: 0, fatal: "" };
       renderRun(); runSession();
     });
@@ -509,15 +600,23 @@
     if (b.dataset.n) { CFG.n = +b.dataset.n; saveCfg(); [].forEach.call($("ikN").children, function (x) { x.setAttribute("aria-pressed", x === b); }); return; }
     if (b.dataset.m) { CFG.m = b.dataset.m === "page" ? "page" : "count"; saveCfg(); [].forEach.call($("ikM").children, function (x) { x.setAttribute("aria-pressed", x === b); }); $("ikCBox").classList.toggle("hide", CFG.m === "page"); return; }
     if (b.dataset.c) { CFG.c = +b.dataset.c; saveCfg(); [].forEach.call($("ikC").children, function (x) { x.setAttribute("aria-pressed", x === b); }); return; }
+    if (b.dataset.sc) { CFG.sc = b.dataset.sc; saveCfg(); return renderScope(); }
+    if (b.dataset.ex) { CFG.ex.splice(+b.dataset.ex, 1); saveCfg(); return renderScope(); }
+    if (b.id === "ikAdd") { CFG.ex = chosen(); saveCfg(); return renderScope(); }
     if (b.id === "ikGo" || b.id === "ikAgain") return start();
     if (b.id === "ikBack") return renderSetup();
     if (b.id === "ikSk") { if (CUR) CUR.finish(false); return; }
     if (b.id === "ikQt") { endSession(); return renderSetup(); }
   });
 
+  document.addEventListener("change", function (e) {
+    var id = e.target && e.target.id;
+    if ((id === "ikA" || id === "ikB") && e.target.closest("#t-test")) setRange(id === "ikA" ? 0 : 1, e.target.value);
+  });
+
   G.Ikhtibar = {
     open: function () { if (!D) D = buildMap(); if (!T) renderSetup(D ? "" : "تعذّر تحميل بيانات المصحف."); },
     leave: function () { if (T) { endSession(); renderSetup(); } },
-    _t: { state: function () { return T; }, prep: prep, prepMulti: prepMulti, pick: pick, buildMap: function () { D = buildMap(); return D; }, memRange: memRange, setText: function (q) { Q = q; }, pageOf: pageOf, keyOf: keyOf }
+    _t: { state: function () { return T; }, prep: prep, prepMulti: prepMulti, pick: pick, buildMap: function () { D = buildMap(); return D; }, memRange: memRange, scopeRange: scopeRange, span: span, cfg: CFG, HIZB: HIZB, setText: function (q) { Q = q; }, pageOf: pageOf, keyOf: keyOf }
   };
 })(typeof window !== "undefined" ? window : globalThis);
