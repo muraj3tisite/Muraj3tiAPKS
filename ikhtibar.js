@@ -276,7 +276,24 @@
       if (n) { w += (n - 1) * .22 * 40; if (w > mx) mx = w; }
     });
     if (mx) tx.style.fontSize = Math.min(40 * W / mx, 64).toFixed(2) + "px";
+    /* حارس: إن بقي سطر أعرض من الصفحة (قياس بخط غير فعّال بعد) صغّر الخط حتى يتسع */
+    var fs = parseFloat(tx.style.fontSize) || 40, t = 0, over;
+    while (t++ < 4) {
+      over = 0; [].forEach.call(lines, function (l) { var r = l.scrollWidth / Math.max(1, l.clientWidth); if (r > over) over = r; });
+      if (over <= 1.005) break;
+      fs = fs / over * .99; tx.style.fontSize = fs.toFixed(2) + "px";
+    }
     [].forEach.call(lines, function (l) { if (l.getAttribute("data-r") !== "1") l.style.display = "none"; });
+  }
+  /* لا يُقاس الخط إلا بعد أن يصبح خط الصفحة فعّالًا، وإلا يُقاس بخط بديل أضيق فيخرج النص كبيرًا ومتداخلًا */
+  function fitSoon(tx, pgs) {
+    fit(tx);
+    try {
+      Promise.all(pgs.map(function (p) { return document.fonts.load("40px QPC" + p, "\uFB50"); })).then(function () { fit(tx); }, function () {});
+      document.fonts.ready.then(function () { fit(tx); });
+      if (window.ResizeObserver) { var w = tx.clientWidth; new ResizeObserver(function () { if (Math.abs(tx.clientWidth - w) > 1) { w = tx.clientWidth; fit(tx); } }).observe(tx); }
+    } catch (e) {}
+    setTimeout(function () { fit(tx); }, 150); setTimeout(function () { fit(tx); }, 700); setTimeout(function () { fit(tx); }, 1800);
   }
   /* العرض المصحفي: كل كلمة تقابلها كلمة من خط الصفحة، وتنكشف بحسب تقدّم القارئ */
   function mushView(P, k1, cnt, box, pgs) {
@@ -312,9 +329,7 @@
     box.innerHTML = '<div class="mushaf-sheet"><div class="mushaf-frame"><div class="mushaf-text ikq">' + h + "</div></div></div>";
     tx = box.querySelector(".ikq");
     [].forEach.call(tx.querySelectorAll("[data-q]"), function (e) { items[+e.getAttribute("data-q")].el = e; });
-    palette(pgs, tx); fit(tx);
-    try { document.fonts.ready.then(function () { fit(tx); }); } catch (e) {}
-    setTimeout(function () { fit(tx); }, 200);
+    palette(pgs, tx); fitSoon(tx, pgs);
     return items;
   }
   /* الاحتياط إن تعذّر خط الصفحة: النص العادي */
