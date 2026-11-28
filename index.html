@@ -247,6 +247,8 @@ button:disabled{opacity:.5;cursor:not-allowed}
 
 /* ===== شريط التحديث ===== */
 #updBar{position:fixed;left:12px;right:12px;bottom:calc(env(safe-area-inset-bottom,0px) + 12px);z-index:90;display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:var(--card);color:var(--ink);border:1px solid var(--acc);border-radius:14px;padding:12px 14px;box-shadow:0 10px 30px rgba(0,0,0,.3);max-width:520px;margin:0 auto}
+#flexNote{position:fixed;left:12px;right:12px;bottom:calc(env(safe-area-inset-bottom,0px) + 12px);z-index:91;background:var(--card);color:var(--ink);border:1px solid var(--acc);border-radius:14px;padding:12px 14px;box-shadow:0 10px 30px rgba(0,0,0,.3);max-width:520px;margin:0 auto}
+#flexNote.hide{display:none}#flexNote b{display:block;margin-bottom:2px}#flexNote p{margin:0 0 10px;color:var(--mut);font-size:14px}#flexNote .row{display:flex;gap:8px;flex-wrap:wrap}#flexNote .row button{flex:1;min-width:110px}
 #updBar.hide{display:none}#updBar b{flex:1;min-width:140px}
 #offAsk{position:fixed;left:12px;right:12px;bottom:calc(env(safe-area-inset-bottom,0px) + 12px);z-index:89;background:var(--card);color:var(--ink);border:1px solid var(--acc);border-radius:14px;padding:12px 14px;box-shadow:0 10px 30px rgba(0,0,0,.25);max-width:720px;margin:0 auto}
 #offAsk.hide{display:none}#offAsk b{display:block;margin-bottom:2px}#offAsk p{margin:0 0 10px;color:var(--mut);font-size:14px}
@@ -301,7 +303,7 @@ nav button[data-t=how]{--ic:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.
 body:has(input:focus) nav[role=tablist],body:has(textarea:focus) nav[role=tablist]{display:none}
 .tj-fin{bottom:calc(var(--vvb,0px) + var(--navb) + 8px)!important}
 #msFab{bottom:calc(var(--vvb,0px) + var(--navb) + var(--ms-fin,64px) + 24px)!important}
-#updBar,#offAsk{bottom:calc(var(--navb) + 12px)!important}
+#updBar,#offAsk,#flexNote{bottom:calc(var(--navb) + 12px)!important}
 
 /* النوافذ تنزلق من الأسفل كأوراق الهاتف */
 @media(max-width:640px){
@@ -702,6 +704,7 @@ html[data-ml="loose"] .mushaf-text .qline{height:2.3em}
  </div>
 </div>
 <div id="offAsk" class="hide" role="dialog" aria-live="polite" aria-labelledby="offAskT"><b id="offAskT">القراءة من المصحف دون إنترنت</b><p id="offAskP">هل تريد تنزيل صفحات المصحف الآن لتقرأ دون اتصال؟ الحجم نحو ١٠٠ ميجا، ويُفضَّل استخدام شبكة واي فاي.</p><div class="bar" id="offAskBarW" hidden><i id="offAskBar" style="width:0%"></i></div><div class="row"><button type="button" id="offAskGo" class="p">نعم، نزّل المصحف</button><button type="button" id="offAskX">لاحقًا</button></div></div>
+<div id="flexNote" class="hide" role="dialog" aria-live="polite" aria-labelledby="flexNoteT"><b id="flexNoteT">جديد: مرونة أكبر في الحفظ والمراجعة</b><p>أضفنا إعدادات تساعدك على تحديد محفوظك ومراجعتك بمرونة: أجزاء كاملة أو صفحات متفرقة، وسقف المراجعة اليومي، واختيار المكان الذي تبدأ منه حفظك الجديد. كلها في زر «تعديل موضع حفظي».</p><div class="row"><button type="button" id="flexNoteGo" class="p">عدّل موضع حفظي الآن</button><button type="button" id="flexNoteX">لاحقًا</button></div></div>
 <div id="updBar" class="hide" role="status"><b>يتوفر تحديث جديد للتطبيق</b><button type="button" id="updGo" class="p">تحديث الآن</button><button type="button" id="updX">لاحقًا</button></div>
 <script>
 var LANG=(function(){try{return localStorage.getItem("mlang")==="en"?"en":"ar"}catch(e){return"ar"}})();
@@ -1961,8 +1964,29 @@ g("setBtn").addEventListener("click",open);g("setBtn2").addEventListener("click"
 })();
 </script>
 
+<script>
+/* إشعار لمرة واحدة بالإعدادات المرنة الجديدة (يظهر عند الدخول التالي للتطبيق) */
+(function(){
+var KEY="mflex_note_v1",n=document.getElementById("flexNote"),tries=0,seen=function(){try{return localStorage.getItem(KEY)==="1"}catch(e){return true}},mark=function(){try{localStorage.setItem(KEY,"1")}catch(e){}};
+if(!n||seen())return;
+function hide(){n.classList.add("hide");mark()}
+document.getElementById("flexNoteX").onclick=hide;
+document.getElementById("flexNoteGo").onclick=function(){hide();
+ var t=document.querySelector('nav button[data-t="today"]');if(t)t.click();
+ var b=document.getElementById("editBtn");if(b){b.click();try{window.scrollTo({top:0,behavior:"smooth"})}catch(e){}}};
+var iv=setInterval(function(){
+ tries++;if(tries>60){clearInterval(iv);return}
+ var mw=document.getElementById("mainWrap");if(!mw||mw.classList.contains("hide"))return;
+ clearInterval(iv);
+ if(!window.S){mark();return}   /* مستخدم جديد: يرى الإعدادات في شاشة البداية */
+ var w=function(){var a=document.getElementById("offAsk"),u=document.getElementById("updBar");
+  if((a&&!a.classList.contains("hide"))||(u&&!u.classList.contains("hide")))return setTimeout(w,3000);
+  n.classList.remove("hide")};
+ setTimeout(w,1500)},1000);
+})();
+</script>
 <script src="robot.js?v=4"></script>
 <script src="musammi.js?v=25"></script>
-<script src="ikhtibar.js?v=6"></script>
+<script src="ikhtibar.js?v=7"></script>
 <script src="mushafi.js?v=5"></script>
 </body></html>

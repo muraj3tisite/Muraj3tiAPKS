@@ -326,13 +326,20 @@
     var els = box.querySelectorAll(".ikw");
     return P.disp.map(function (w, i) { return { el: els[i], thr: w.b, a: w.a, b: w.b, mark: !!w.mark }; });
   }
-  /* يُعرض المطلوب بشكل المصحف (وإلا نصًا عاديًا) ويُرجع عناصره لتُكشف تباعًا */
+  /* يُعرض المطلوب فورًا: بشكل المصحف إن كانت خطوط الصفحات جاهزة، وإلا نصًا عاديًا يتحوّل إلى شكل المصحف حين تُحمَّل الخطوط (دون فقد ما كُشف) */
   function showView(P, k1, cnt) {
     var box = $("ikAy"); if (!box) return Promise.resolve([]);
-    return fonts(pagesFor(k1, cnt)).then(function (ok) {
-      box = $("ikAy"); if (!box) return [];
-      if (ok && D) { try { return mushView(P, k1, cnt, box, pagesFor(k1, cnt)); } catch (e) {} }
-      return textView(P, box);
+    var pgs = pagesFor(k1, cnt), items = [], ready = fonts(pgs);
+    function put(arr) { items.length = 0; Array.prototype.push.apply(items, arr); }
+    return Promise.race([ready, wait(1200).then(function () { return "late"; })]).then(function (r) {
+      box = $("ikAy"); if (!box) return items;
+      if (r === true && D) { try { put(mushView(P, k1, cnt, box, pgs)); return items; } catch (e) {} }
+      put(textView(P, box));
+      if (r === "late" && D) ready.then(function (ok) {
+        var b = $("ikAy"); if (!ok || !b || b.classList.contains("ok") || b.classList.contains("bad")) return;
+        try { put(mushView(P, k1, cnt, b, pgs)); if (items.onSwap) items.onSwap(); } catch (e) {}
+      });
+      return items;
     });
   }
   function paint(items, eng, mark, box) {
@@ -371,6 +378,7 @@
       var n = P.E.length, allow = allowed(n), start = Date.now(), lim = Math.min(300000, 15000 + 1500 * n),
         lastT = Date.now(), seen = false, done = false, rec = null, iv = null, mark = [], core = C(), eng = new core.Engine(P.EO, { start: 0 });
       var box = $("ikAy"); paint(items, eng, mark, box);
+      items.onSwap = function () { if (!done) paint(items, eng, mark, $("ikAy")); };
       function good() { return eng.p >= n && eng.err <= allow; }
       function finish(ok) {
         if (done) return; done = true; clearInterval(iv); if (rec) rec.stop(); CUR = null;
