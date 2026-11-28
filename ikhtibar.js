@@ -170,7 +170,7 @@
   var GAPEM = .36;   /* المسافة الثابتة بين الكلمات في كل الأسطر (بالـ em) */
   var CSS = "#t-test .ik-top{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px}" +
     "#t-test .ik-st{font-weight:700;margin:12px 0 4px;min-height:1.8em}" +
-    "#t-test .ik-ay{font-family:'Amiri Quran','Amiri','Noto Naskh Arabic',serif;font-size:26px;line-height:2.5;text-align:center;min-height:3em;padding:6px 4px}" +
+    "#t-test .ik-ay{font-family:'Amiri Quran','Amiri','Noto Naskh Arabic',serif;font-size:clamp(28px,7.5vw,40px);line-height:2.4;text-align:center;min-height:3em;padding:6px 4px}" +
     "#t-test .ikw{display:inline-block;margin:.1em .3em;padding:0 .45em;line-height:1.75;border-radius:.4em;transition:background .35s,color .35s,box-shadow .35s}" +
     "#t-test .ikw:not(.on){color:transparent;background:var(--acc2);box-shadow:inset 0 0 0 1.5px color-mix(in srgb,var(--acc) 38%,transparent);text-shadow:none;user-select:none}" +
     "#t-test .ikw:not(.on).nx{animation:ikNx 1.4s ease-in-out infinite}" +
@@ -178,14 +178,16 @@
     "#t-test .ikw.on{animation:ikIn .6s cubic-bezier(.22,1.25,.36,1) both}" +
     "@keyframes ikIn{0%{opacity:0;transform:translateY(7px) scale(.82);filter:blur(3px) drop-shadow(0 0 0 rgba(212,160,23,0))}55%{opacity:1;filter:blur(0) drop-shadow(0 0 7px rgba(212,160,23,.75))}100%{opacity:1;transform:none;filter:none}}" +
     "#t-test .ik-ay.ok .ikw.on{color:var(--ok)}" +
-    "#t-test .ikw.mk{padding:0 2px;font-size:.8em;opacity:.8}#t-test .ik-ay{max-height:55vh;overflow:auto}" +
+    "#t-test .ikw.mk{padding:0 2px;font-size:.8em;opacity:.8}" +
     "#t-test .ikw.on.x{color:#d93025;background:rgba(217,48,37,.14);box-shadow:0 0 0 1.5px rgba(217,48,37,.6)}" +
     "@media(prefers-reduced-motion:reduce){#t-test .ikw.on,#t-test .ikw:not(.on).nx{animation:none}#t-test .ikq .ikg.on i,#t-test .ikq .ikg:not(.on).nx{animation:none}}" +
     "#t-test .ik-ay.mq{font-size:inherit;line-height:normal;text-align:initial;max-height:none;overflow:visible;min-height:0;padding:0}" +
     "#t-test .ik-ay.mq.ok .mushaf-frame{border-color:var(--ok)}#t-test .ik-ay.mq.bad .mushaf-frame{border-color:#d93025}" +
     "#t-test .ikq .qline{justify-content:center!important;column-gap:" + GAPEM + "em!important}" +
     "#t-test .ikq .ikg{display:block;line-height:1.6;padding:.05em .12em;border-radius:.22em;transition:background .35s,box-shadow .35s}" +
-    "#t-test .ikq .ikg.off{visibility:hidden}" +
+    "#t-test .ikq .ikg.off{display:none}" +
+    "#t-test .ikq.rf{display:flex;flex-wrap:wrap;justify-content:center;align-content:flex-start;direction:rtl;column-gap:" + GAPEM + "em;row-gap:.35em}" +
+    "#t-test .ikq.rf .qline{display:contents!important}" +
     "#t-test .ikq .ikg i{display:block;font-style:normal}" +
     "#t-test .ikq .ikg:not(.on):not(.off){background:var(--acc2);box-shadow:inset 0 0 0 1.5px color-mix(in srgb,var(--acc) 38%,transparent)}#t-test .ikq .ikg:not(.on) i{opacity:0}" +
     "#t-test .ikq .ikg:not(.on).nx{animation:ikNx 1.4s ease-in-out infinite}" +
@@ -271,20 +273,25 @@
     if (!tx || !tx.isConnected) return;
     var cs = getComputedStyle(tx), W = tx.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight), mx = 0, lines = tx.querySelectorAll(".qline");
     if (W <= 0) return;
+    tx.classList.remove("rf");
     [].forEach.call(lines, function (l) { l.style.display = ""; });
     tx.style.fontSize = "40px";
     [].forEach.call(lines, function (l) {
-      var w = 0, n = 0; [].forEach.call(l.querySelectorAll(".qw"), function (x) { w += x.getBoundingClientRect().width; n++; });
+      var w = 0, n = 0; [].forEach.call(l.querySelectorAll(".qw:not(.off)"), function (x) { w += x.getBoundingClientRect().width; n++; });
       if (n) { w += (n - 1) * GAPEM * 40; if (w > mx) mx = w; }
     });
-    if (mx) tx.style.fontSize = Math.min(40 * W / mx, 64).toFixed(2) + "px";
+    var fs = mx ? Math.min(40 * W / mx, 84) : 40;
+    tx.style.fontSize = fs.toFixed(2) + "px";
     /* حارس: إن بقي سطر أعرض من الصفحة (قياس بخط غير فعّال بعد) صغّر الخط حتى يتسع */
-    var fs = parseFloat(tx.style.fontSize) || 40, t = 0, over;
+    var t = 0, over;
     while (t++ < 4) {
       over = 0; [].forEach.call(lines, function (l) { var r = l.scrollWidth / Math.max(1, l.clientWidth); if (r > over) over = r; });
       if (over <= 1.005) break;
       fs = fs / over * .99; tx.style.fontSize = fs.toFixed(2) + "px";
     }
+    /* المقطع الطويل (أسطر كثيرة) يصغّر خط الأسطر المصحفية: نكتفي بحجم مقروء ونُسيل الكلمات على أسطر جديدة بدل التصغير */
+    var target = Math.max(30, Math.min(44, W / 9.5));
+    if (fs < target) { tx.classList.add("rf"); tx.style.fontSize = target.toFixed(2) + "px"; }
     [].forEach.call(lines, function (l) { if (l.getAttribute("data-r") !== "1") l.style.display = "none"; });
   }
   /* لا يُقاس الخط إلا بعد أن يصبح خط الصفحة فعّالًا، وإلا يُقاس بخط بديل أضيق فيخرج النص كبيرًا ومتداخلًا */
@@ -368,7 +375,7 @@
       if (!it.mark && it.el.classList.contains("on") && !it.el.classList.contains("x")) { bad = false; for (j = it.a; j < it.b; j++) if (mark[j] === 2) bad = true; if (bad) it.el.classList.add("x"); }
     }
     [].forEach.call(box.querySelectorAll(".nx"), function (e) { e.classList.remove("nx"); });
-    if (first >= 0) { items[first].el.classList.add("nx"); try { if (items.length > 40) items[first].el.scrollIntoView({ block: "nearest", behavior: "smooth" }); } catch (e) {} }
+    if (first >= 0) { items[first].el.classList.add("nx"); try { var rc = items[first].el.getBoundingClientRect(); if (rc.top < 110 || rc.bottom > (window.innerHeight || 700) - 150) items[first].el.scrollIntoView({ block: "center", behavior: "smooth" }); } catch (e) {} }
   }
   /* عند الانتهاء: تُكشف الكلمات الباقية تباعًا (بالأحمر إن أخطأ) */
   function revealRest(items, box, ok) {
