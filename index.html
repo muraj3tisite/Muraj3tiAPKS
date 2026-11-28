@@ -41,6 +41,7 @@ label{display:block;font-weight:600;margin:12px 0 4px}
 .seg{display:flex;gap:6px;flex-wrap:wrap}
 .seg button{flex:1;min-width:70px}
 .seg button[aria-pressed=true]{background:var(--acc2);border-color:var(--acc);font-weight:600}
+.jgrid{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;margin:6px 0}.jgrid button{min-height:46px;padding:4px 0;font-weight:700;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1.25;min-width:0}.jgrid button small{font-size:10px;font-weight:400;opacity:.85}.jgrid button[aria-pressed=true]{background:var(--acc);color:#fff;border-color:var(--acc)}.jgrid button[aria-pressed=mixed]{background:var(--acc2);border-color:var(--acc);box-shadow:inset 0 -4px 0 var(--acc)}
 nav{display:flex;gap:4px;margin-bottom:14px;border-bottom:1px solid var(--line)}
 nav button{flex:1;border:0;border-radius:10px 10px 0 0;background:none;padding:10px 4px}
 nav button[aria-selected=true]{border-bottom:3px solid var(--acc);font-weight:800;color:var(--acc)}
@@ -435,12 +436,24 @@ html[data-ml="loose"] .mushaf-text .qline{height:2.3em}
 
 <section id="setup" class="card hide">
  <h2>أين وصلت في حفظك؟</h2>
- <label>اتجاه الحفظ</label>
+ <label>اتجاه الحفظ الجديد</label>
  <div class="seg" id="dirSeg">
   <button data-v="fwd" aria-pressed="true">من الفاتحة والبقرة</button>
   <button data-v="back" aria-pressed="false">من الناس وجزء عمّ</button>
  </div>
- <label>أحدّد حفظي بـ</label>
+  <p class="sub">يُحفظ الجزء من أوله إلى آخره، فإذا أنهيت جزءًا بدأت من أول الجزء الذي بعده (فبعد جزء عمّ تبدأ من أول سورة تبارك)، لا من آخره.</p>
+ <label>طريقة تحديد المحفوظ</label>
+  <div class="seg" id="modeSeg"><button data-v="flex" aria-pressed="true">اختيار مرن</button><button data-v="count" aria-pressed="false">بالعدد</button></div>
+  <div id="flexBox">
+   <label>الأجزاء التي حفظتها (اضغط على كل جزء)</label>
+   <div class="jgrid" id="juzGrid" role="group" aria-label="الأجزاء المحفوظة"></div>
+   <p class="sub">الجزء ٣٠ هو عمّ، والجزء ٢٩ هو تبارك، والجزء ١ فيه الفاتحة وأول البقرة. الجزء الملوَّن كله محفوظ، وذو الخط السفلي محفوظ بعضه.</p>
+   <label>أو أضف نطاقًا بالصفحات (لحفظ جزئي)</label>
+   <div class="row" style="align-items:center"><input id="rgA" type="number" min="1" max="604" inputmode="numeric" placeholder="من صفحة" aria-label="من صفحة" style="max-width:110px"><input id="rgB" type="number" min="1" max="604" inputmode="numeric" placeholder="إلى صفحة" aria-label="إلى صفحة" style="max-width:110px"><button id="rgAdd" type="button">إضافة</button><button id="rgClr" type="button">مسح الكل</button></div>
+   <p class="sub" id="memSum" role="status"></p>
+  </div>
+  <div id="cntBox" class="hide">
+  <label>أحدّد حفظي بـ</label>
  <div class="seg" id="unitSeg">
   <button data-v="juz" aria-pressed="true">الأجزاء</button>
   <button data-v="hizb" aria-pressed="false">الأحزاب</button>
@@ -449,7 +462,8 @@ html[data-ml="loose"] .mushaf-text .qline{height:2.3em}
  </div>
  <label id="valLbl" for="val">عدد الأجزاء المحفوظة</label>
  <select id="val"><option value="1">١ جزء</option><option value="2">٢ جزءًا</option><option value="3">٣ جزءًا</option><option value="4">٤ جزءًا</option><option value="5">٥ جزءًا</option><option value="6">٦ جزءًا</option><option value="7">٧ جزءًا</option><option value="8">٨ جزءًا</option><option value="9">٩ جزءًا</option><option value="10">١٠ جزءًا</option><option value="11">١١ جزءًا</option><option value="12">١٢ جزءًا</option><option value="13">١٣ جزءًا</option><option value="14">١٤ جزءًا</option><option value="15">١٥ جزءًا</option><option value="16">١٦ جزءًا</option><option value="17">١٧ جزءًا</option><option value="18">١٨ جزءًا</option><option value="19">١٩ جزءًا</option><option value="20">٢٠ جزءًا</option><option value="21">٢١ جزءًا</option><option value="22">٢٢ جزءًا</option><option value="23">٢٣ جزءًا</option><option value="24">٢٤ جزءًا</option><option value="25">٢٥ جزءًا</option><option value="26">٢٦ جزءًا</option><option value="27">٢٧ جزءًا</option><option value="28">٢٨ جزءًا</option><option value="29">٢٩ جزءًا</option><option value="30">٣٠ جزءًا</option></select>
- <label for="newPD">الجديد يوميًا (صفحات)</label>
+ </div>
+  <label for="newPD">الجديد يوميًا (صفحات)</label>
  <input id="newPD" type="number" min="0" max="20" value="1">
  <label for="winPg">سقف المراجعة القديمة يوميًا (صفحات)</label>
  <input id="winPg" type="number" min="5" max="100" placeholder="تلقائي">
@@ -695,6 +709,28 @@ function jS(n){return n<2?1:20*(n-1)+2}
 function hS(n){return n<2?1:10*(n-1)+2}
 function juzOf(p){return Math.min(30,p<22?1:Math.floor((p-2)/20)+1)}
 function surahOf(p){var s=0;for(var i=0;i<114;i++){if(SP[i]<=p)s=i}return s}
+/* ===== نموذج المحفوظ المرن =====
+   S.mem: نطاقات الصفحات المحفوظة مبدئيًا [[من، إلى]، ...] (أي أجزاء أو صفحات متفرقة)، وS.dir: اتجاه الحفظ الجديد، وS.N: عدد المحفوظ الآن (يزيد بالحفظ الجديد).
+   ORD: ترتيب كل الصفحات: المحفوظ أولًا، ثم الجديد بالترتيب. الجزء يُحفظ من أوله إلى آخره، فإذا انتهى جزء بدأ الذي بعده من أوله (بعد عمّ تبدأ تبارك من أول سورة الملك)،
+   إلا الجزء المحفوظ آخره فقط (من الناس رجوعًا) فيكمل رجوعًا. */
+function jEnd(j){return j>=30?604:jS(j+1)-1}
+function memFlags(mem){var f=[],i,p;for(i=0;i<=604;i++)f[i]=0;(mem||[]).forEach(function(r){for(p=Math.max(1,r[0]);p<=Math.min(604,r[1]);p++)f[p]=1});return f}
+function runsOf(ps){var o=[],k;ps=ps.slice().sort(function(a,b){return a-b});for(k=0;k<ps.length;k++){if(o.length&&ps[k]===o[o.length-1][1]+1)o[o.length-1][1]=ps[k];else if(!o.length||ps[k]!==o[o.length-1][1])o.push([ps[k],ps[k]])}return o}
+function buildOrd(mem,dir){
+ var f=memFlags(mem),js=[],ini=[],q=[],j,p;
+ for(j=1;j<=30;j++)js.push(j);if(dir!=="fwd")js.reverse();
+ js.forEach(function(j){var a=jS(j),b=jEnd(j),U=[],m=0;
+  for(p=a;p<=b;p++){if(f[p]){m++;ini.push(p)}else U.push(p)}
+  if(m>0&&U.length&&f[b]&&!f[a])U.reverse();
+  q=q.concat(U)});
+ return ini.concat(q)}
+function ensureMem(){if(!S||S.mem)return;var N=+S.N||0,a=+S.a||1,b=+S.b||604;if(!S.dir)S.dir="fwd";S.mem=N>0?(S.dir==="fwd"?[[a,Math.min(604,a+N-1)]]:[[Math.max(1,b-N+1),b]]):[]}
+var _ordK="",_ord=[];
+function ORD(){if(!S)return [];ensureMem();var k=S.dir+"|"+JSON.stringify(S.mem);if(k!==_ordK){_ord=buildOrd(S.mem,S.dir);_ordK=k}return _ord}
+function rg(i,j){var ps=ORD().slice(i,j);return [Math.min.apply(null,ps),Math.max.apply(null,ps)]}
+window.MPlan={pages:function(){return S?ORD().slice(0,S.N):[]},last:function(){return S&&S.N>0?ORD()[S.N-1]:0},next:function(){return S&&S.N<604?ORD()[S.N]:0},
+ summary:function(){var ps=S?ORD().slice(0,S.N):[];if(!ps.length)return "";var rs=runsOf(ps);return AR(ps.length)+" صفحة ("+rs.slice(0,4).map(function(r){return r[0]===r[1]?AR(r[0]):AR(r[0])+"–"+AR(r[1])}).join("، ")+(rs.length>4?"…":"")+")"}};
+
 function load(){try{var r=localStorage.getItem("muraja3a1");if(r)S=JSON.parse(r)}catch(e){}}
 function save(){try{localStorage.setItem("muraja3a1",JSON.stringify(S))}catch(e){}}
 function dkey(d){var x=new Date(d);return x.getFullYear()+"-"+(x.getMonth()+1)+"-"+x.getDate()}
@@ -733,15 +769,15 @@ function segs(id,key){
 
 /* plan */
 function pg(i){ /* memorization-order index -> page */
- return S.dir==="fwd"?S.a+i:S.b-i;
+ return ORD()[i];
 }
 function lbl(i,j){ /* indices [i,j) */
- var p1=pg(i),p2=pg(j-1),lo=Math.min(p1,p2),hi=Math.max(p1,p2);
- var s1=surahOf(lo),s2=surahOf(hi);
- var t="صفحة "+AR(lo)+(hi>lo?" إلى "+AR(hi):"");
- var j1=juzOf(lo),j2=juzOf(hi);
- t+=" — "+(j1===j2?"الجزء "+AR(j1):"الجزء "+AR(j1)+" إلى "+AR(j2));
- t+=" — "+(s1===s2?"سورة "+SN[s1]:"من "+SN[s1]+" إلى "+SN[s2]);
+ var ps=ORD().slice(i,j),rs=runsOf(ps),lo=Math.min.apply(null,ps),hi=Math.max.apply(null,ps),t,k,js={},jl=[];
+ t="صفحة "+rs.slice(0,3).map(function(r){return r[0]===r[1]?AR(r[0]):AR(r[0])+" إلى "+AR(r[1])}).join("، ")+(rs.length>3?"…":"");
+ if(rs.length===1){var s1=surahOf(lo),s2=surahOf(hi),j1=juzOf(lo),j2=juzOf(hi);
+  t+=" — "+(j1===j2?"الجزء "+AR(j1):"الجزء "+AR(j1)+" إلى "+AR(j2));
+  t+=" — "+(s1===s2?"سورة "+SN[s1]:"من "+SN[s1]+" إلى "+SN[s2])}
+ else{ps.forEach(function(p){js[juzOf(p)]=1});for(k in js)jl.push(+k);jl.sort(function(a,b){return a-b});t+=" — الجزء "+jl.slice(0,5).map(AR).join(" و")+(jl.length>5?"…":"")}
  return t;
 }
 function plan(d){
@@ -760,9 +796,9 @@ function render(){
  $("sS").textContent=AR(st);
  $("phase").textContent=P.full?"المرحلة: مراجعة شاملة. مراجعتك اليوم هي كل محفوظك: "+AR(N)+" صفحة (نحو "+AR(+(N/20).toFixed(1))+" جزء)، وتكبر معك تدريجيًا.":"المرحلة: مراجعة دوّارة. مراجعتك القديمة اليوم نحو "+AR(P.old[1]-P.old[0])+" صفحة، وتدور على كل محفوظك كل "+AR(P.cyc)+" يومًا تقريبًا.";
  var T=TK=[],pn=0;
- if(S.np>0&&N+S.np<=604){T.push({id:"new",lo:(S.dir==="fwd"?S.a+N:S.b-N),hi:(S.dir==="fwd"?S.a+N:S.b-N),t:"الحفظ الجديد",s:AR(S.np)+" صفحة بعد آخر محفوظك: ابدأ من صفحة "+AR(S.dir==="fwd"?S.a+N:S.b-N)+" — 9 تكرارات للحفظ"});pn+=S.np}
- if(N>0){T.push({id:"old",lo:Math.min(pg(P.old[0]),pg(P.old[1]-1)),hi:Math.max(pg(P.old[0]),pg(P.old[1]-1)),t:P.full?"المراجعة الشاملة":"المراجعة القديمة (دورة اليوم)",s:lbl(P.old[0],P.old[1]),n:P.old[1]-P.old[0]});pn+=P.old[1]-P.old[0]}
- if(P.rec){T.push({id:"rec",lo:Math.min(pg(P.rec[0]),pg(P.rec[1]-1)),hi:Math.max(pg(P.rec[0]),pg(P.rec[1]-1)),t:"المراجعة القريبة",s:lbl(P.rec[0],P.rec[1])+" — للوصول إلى 30 تكرارًا",n:P.rec[1]-P.rec[0]});pn+=P.rec[1]-P.rec[0]}
+ if(S.np>0&&N+S.np<=604){T.push({id:"new",lo:(pg(N)),hi:(pg(N)),t:"الحفظ الجديد",s:AR(S.np)+" صفحة بعد آخر محفوظك: ابدأ من صفحة "+AR(pg(N))+" — 9 تكرارات للحفظ"});pn+=S.np}
+ if(N>0){T.push({id:"old",lo:rg(P.old[0],P.old[1])[0],hi:rg(P.old[0],P.old[1])[1],t:P.full?"المراجعة الشاملة":"المراجعة القديمة (دورة اليوم)",s:lbl(P.old[0],P.old[1]),n:P.old[1]-P.old[0],pgs:ORD().slice(P.old[0],P.old[1])});pn+=P.old[1]-P.old[0]}
+ if(P.rec){T.push({id:"rec",lo:rg(P.rec[0],P.rec[1])[0],hi:rg(P.rec[0],P.rec[1])[1],t:"المراجعة القريبة",s:lbl(P.rec[0],P.rec[1])+" — للوصول إلى 30 تكرارًا",n:P.rec[1]-P.rec[0],pgs:ORD().slice(P.rec[0],P.rec[1])});pn+=P.rec[1]-P.rec[0]}
  var h="",done=0;
  T.forEach(function(x){var ck=dn[x.id];if(ck)done++;
   h+='<label class="task'+(ck?" done":"")+'" style="margin:0 0 10px;font-weight:400"><input type="checkbox" data-id="'+x.id+'"'+(ck?" checked":"")+'><span><b>'+x.t+'</b>'+(x.n?'<span class="tag">'+AR(x.n)+' صفحة</span>':"")+"<small>"+x.s+"</small></span></label>"+'<div class="row" style="margin:-2px 0 14px"><button data-rd="'+x.lo+','+x.hi+',study">اقرأ</button><button data-rd="'+x.lo+','+x.hi+',review">راجع</button><button data-rd="'+x.lo+','+x.hi+',tasmee">سمّع</button></div>'});
@@ -774,7 +810,7 @@ function render(){
  var wk="";for(var i=0;i<7;i++){var dt=new Date();dt.setDate(dt.getDate()+i);var q=plan(dayIdx()+i);
   wk+="<tr"+(i===0?' class="today"':"")+"><td>"+(i===0?"اليوم":dt.toLocaleDateString(LANG,{weekday:"long",day:"numeric",month:"short"}))+"</td><td>"+(N?lbl(q.old[0],q.old[1]):"—")+"</td></tr>"}
  $("wk").innerHTML=wk;
- var w2="",mx=S.dir==="fwd"?605-S.a:S.b,bs=N-((S.log[k]&&S.log[k].added)?S.np:0);
+ var w2="",mx=604,bs=N-((S.log[k]&&S.log[k].added)?S.np:0);
  for(var j=0;j<7;j++){var d2=new Date();d2.setDate(d2.getDate()+j);var f0=bs+j*S.np,t0=Math.min(mx,f0+S.np);
   w2+="<tr"+(j===0?' class="today"':"")+"><td>"+(j===0?"اليوم":d2.toLocaleDateString(LANG,{weekday:"long",day:"numeric",month:"short"}))+"</td><td>"+(S.np>0&&f0<mx?lbl(f0,t0)+" — "+AR(t0-f0)+" صفحة":"لا حفظ جديد")+"</td></tr>"}
  $("wk2").innerHTML=w2;
@@ -789,10 +825,33 @@ $("tasks").addEventListener("change",function(e){var el=e.target;if(el.dataset.i
 /* init */
 function show(){var has=!!S;$("setup").classList.toggle("hide",has&&!editing);$("app").classList.toggle("hide",!has||editing);if(has&&!editing)render()}
 var editing=false;
-$("saveSetup").onclick=function(){var r=range();
- S={dir:cfg.dir,a:r.a,b:r.b,N:r.b-r.a+1,np:Math.max(0,+$("newPD").value||0),win:+$("winPg").value>0?Math.max(5,+$("winPg").value):0,start:Date.now(),w0:(S&&(S.w0||S.start))||Date.now(),ch:(window.MPROF&&MPROF.ch())||(S&&S.ch)||"boy",log:(S&&S.log)||{}};
+/* ----- تحديد المحفوظ المرن: أجزاء كاملة أو نطاقات صفحات ----- */
+cfg.mode="flex";var FL=[];for(var _i=0;_i<=604;_i++)FL[_i]=0;
+function flexFrom(ps){for(var i=0;i<=604;i++)FL[i]=0;ps.forEach(function(p){FL[p]=1})}
+function flexPages(){var o=[],p;for(p=1;p<=604;p++)if(FL[p])o.push(p);return o}
+function renderFlex(){
+ var h="",j,p,c,n,tot=0,full=[],cap={1:"الفاتحة",29:"تبارك",30:"عمّ"};
+ for(j=1;j<=30;j++){c=0;n=jEnd(j)-jS(j)+1;for(p=jS(j);p<=jEnd(j);p++)c+=FL[p];tot+=c;if(c===n)full.push(j);
+  h+='<button type="button" data-j="'+j+'" aria-pressed="'+(c===n?"true":c>0?"mixed":"false")+'" aria-label="الجزء '+AR(j)+'">'+AR(j)+(cap[j]?"<small>"+cap[j]+"</small>":"")+"</button>"}
+ $("juzGrid").innerHTML=h;
+ $("memSum").textContent=tot?"محفوظك: "+AR(tot)+" صفحة"+(full.length?" — أجزاء كاملة: "+full.map(AR).join("، "):"")+".":"لم تحدّد شيئًا بعد، فستبدأ الحفظ من الأول.";
+}
+function setMode(m){cfg.mode=m;[].forEach.call($("modeSeg").children,function(x){x.setAttribute("aria-pressed",x.dataset.v===m)});$("flexBox").classList.toggle("hide",m!=="flex");$("cntBox").classList.toggle("hide",m==="flex")}
+$("modeSeg").addEventListener("click",function(e){var b=e.target.closest("button");if(b)setMode(b.dataset.v)});
+$("juzGrid").addEventListener("click",function(e){var b=e.target.closest("button");if(!b)return;var j=+b.dataset.j,p,full=true;
+ for(p=jS(j);p<=jEnd(j);p++)if(!FL[p])full=false;
+ for(p=jS(j);p<=jEnd(j);p++)FL[p]=full?0:1;renderFlex()});
+$("rgAdd").onclick=function(){var a=Math.round(+$("rgA").value),b=Math.round(+$("rgB").value||+$("rgA").value);if(!(a>=1&&a<=604))return;b=Math.max(1,Math.min(604,b));if(a>b){var t=a;a=b;b=t}
+ for(var p=a;p<=b;p++)FL[p]=1;$("rgA").value="";$("rgB").value="";renderFlex()};
+$("rgClr").onclick=function(){flexFrom([]);renderFlex()};
+$("saveSetup").onclick=function(){var mem,N,r;
+ if(cfg.mode==="flex"){var ps=flexPages();mem=runsOf(ps);N=ps.length}
+ else{r=range();mem=[[r.a,r.b]];N=r.b-r.a+1}
+ S={dir:cfg.dir,mem:mem,a:1,b:604,N:N,np:Math.max(0,+$("newPD").value||0),win:+$("winPg").value>0?Math.max(5,+$("winPg").value):0,start:Date.now(),w0:(S&&(S.w0||S.start))||Date.now(),ch:(window.MPROF&&MPROF.ch())||(S&&S.ch)||"boy",log:(S&&S.log)||{}};
  editing=false;save();show()};
-$("editBtn").onclick=function(){editing=true;$("cancelSetup").classList.remove("hide");show()};
+$("editBtn").onclick=function(){editing=true;$("cancelSetup").classList.remove("hide");
+ if(S){cfg.dir=S.dir||"fwd";[].forEach.call($("dirSeg").children,function(x){x.setAttribute("aria-pressed",x.dataset.v===cfg.dir)});flexFrom(window.MPlan.pages());setMode("flex");$("newPD").value=S.np;$("winPg").value=S.win>0?S.win:"";fillVals();renderFlex()}
+ show()};
 $("cancelSetup").onclick=function(){editing=false;show()};
 $("resetBtn").onclick=function(){if(confirm("هل تريد مسح كل بياناتك؟")){try{localStorage.removeItem("muraja3a1")}catch(e){}S=null;editing=false;$("cancelSetup").classList.add("hide");show()}};
 document.querySelector("nav").addEventListener("click",function(e){var b=e.target.closest("button");if(!b)return;tab=b.dataset.t;
@@ -855,7 +914,7 @@ $('homeBtn').onclick=function(){$('mainWrap').classList.add('hide');$('intro').c
 document.addEventListener('keydown',function(e){if($('intro').classList.contains('hide'))return;if(e.key==='ArrowLeft')introGo(iSi+1,1);if(e.key==='ArrowRight')introGo(iSi-1,-1)});
 var iTx=null;$('slide').addEventListener('touchstart',function(e){iTx=e.touches[0].clientX},{passive:true});
 $('slide').addEventListener('touchend',function(e){if(iTx===null)return;var dx=e.changedTouches[0].clientX-iTx;iTx=null;if(Math.abs(dx)>50){if(dx<0)introGo(iSi+1,1);else introGo(iSi-1,-1)}});
-segs("dirSeg","dir");segs("unitSeg","unit");fillVals();load();show();introGo(0,1);
+segs("dirSeg","dir");segs("unitSeg","unit");fillVals();renderFlex();load();show();introGo(0,1);
 /* reader */
 var SPP=[1,2,45,69,95,115,136,160,169,187,199,212,225,231,237,242,255,266,277,284,294,302,311,319,329,335,345,354,364,371,377,381,383,393,399,404,410,417,422,431,439,445,451,457,460,464,468,472,477,479,482,485,487,490,493,496,499,504,507,510,513,515,516,518,520,522,524,526,529,531,533,534,537,538,540,542,544,545,547,548,550,551,552,553,554,555,556,556,557,559,559,560,561,561,562,562,563,563,564,564,565,565,566,566,566,567,567,567,568,568,568,569,569,569];
 var PDFN=569,R={doc:null,pg:1,mode:'study'};
@@ -883,7 +942,7 @@ $('rdX').onclick=function(){$('rd').classList.add('hide');document.body.style.ov
 document.addEventListener('keydown',function(e){if(e.key==='Escape'&&!$('rd').classList.contains('hide'))$('rdX').onclick()});
 $('rdPrev').onclick=function(){go(R.pg-1)};$('rdNext').onclick=function(){go(R.pg+1)};
 $('rdModes').onclick=function(e){var b=e.target.closest('button');if(b)setMode(b.dataset.m)};
-$('rdHifz').onclick=function(){if(!S)return;var p=S.dir==='fwd'?S.a+S.N:S.b-S.N;setMode('study');go(toPdf(Math.max(1,Math.min(604,p))))};
+$('rdHifz').onclick=function(){if(!S)return;var p=window.MPlan.next()||604;setMode('study');go(toPdf(Math.max(1,Math.min(604,p))))};
 $('rdMask').onclick=function(e){var m=e.target.closest('.m');if(m)m.classList.toggle('off')};
 $('rdTools').onclick=function(e){var b=e.target.closest('button');if(!b)return;var a=b.dataset.a,ms=document.querySelectorAll('#rdMask .m');
  if(a==='show'||a==='ok'||a==='bad')[].forEach.call(ms,function(x){x.classList.add('off')});
@@ -1233,7 +1292,7 @@ $("tjToggleColors").addEventListener("click",function(){
  tjApplyView();
 });
 $("tjJumpHifz").addEventListener("click",function(){
- var target=S?(S.dir==="fwd"?Math.min(604,Math.max(1,S.a+S.N-1)):Math.min(604,Math.max(1,S.b-S.N+1))):1;
+ var target=S&&S.N>0?window.MPlan.last():1;
  tjFetchPage(target);
 });
 
@@ -1900,6 +1959,6 @@ g("setBtn").addEventListener("click",open);g("setBtn2").addEventListener("click"
 
 <script src="robot.js?v=4"></script>
 <script src="musammi.js?v=25"></script>
-<script src="ikhtibar.js?v=3"></script>
-<script src="mushafi.js?v=3"></script>
+<script src="ikhtibar.js?v=4"></script>
+<script src="mushafi.js?v=4"></script>
 </body></html>

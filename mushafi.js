@@ -18,7 +18,7 @@
       auto: "تلقائي", frame: "لون الإطار", size: "حجم الخط", lsp: "تباعد الأسطر", big: "كبير", mid: "متوسط", sml: "صغير", tight: "متقارب", norm: "عادي", loose: "متباعد", none: "بدون",
       green: "أخضر", gold: "ذهبي", blue: "أزرق", brown: "بني", cream: "ورقي", sand: "بيج", mint: "أخضر فاتح", gray: "رمادي",
       noteQ: "قرآني: للمراجعة والحفظ والتسميع، بألوان التجويد ومهامك اليومية.", noteM: "مصحفي: للقراءة فقط، صفحة كاملة على الشاشة مع بحث وإعدادات.",
-      mRead: "قراءة", mStudy: "حفظ", mReview: "مراجعة", mTasmee: "تسميع", mAuto: "آلي", today: "مهام اليوم", guide: "دليل التجويد", goto: "الانتقال إلى", hifzPos: "موضع حفظي", lastRead: "آخر قراءة", go: "اذهب", pageNo: "رقم الصفحة", rep: "التكرار", repAdd: "+١ تكرار", repHint: "٩ للحفظ و٣٠ للإتقان", showAll: "أظهر الكل", hideAll: "أخفِ الكل", nextAya: "الآية التالية", revealPage: "اكشف الصفحة", okBtn: "بلا خطأ", badBtn: "أخطأت", lastTas: "آخر تسميع", tasOk: "بلا خطأ", tasBad: "بأخطاء", mic: "ابدأ التسميع", micStop: "إيقاف", from: "ابدأ من", micHint: "اضغط الميكروفون وابدأ التلاوة من حفظك", listening: "أسمعك… ", words: "كلمة", errs: "أخطاء", stopped: "تم الإيقاف", doneOk: "أحسنت! أتممت الصفحة بلا أخطاء ✓", doneErr: "أتممت الصفحة، وعدد الأخطاء: %n", noSR: "متصفحك لا يدعم التعرّف على الصوت. جرّب Chrome، أو استخدم التسميع اليدوي.", micDenied: "لم يُسمح باستخدام الميكروفون. فعّله من إعدادات المتصفح.", srErr: "تعذّر التعرّف على الصوت. تحقق من الإنترنت.", prepText: "جارٍ تجهيز النص…", textFail: "تعذّر تحميل نص القرآن اللازم للتسميع الآلي.", finStudy: "أنهيت حفظي", finReview: "أنهيت مراجعتي", finTasmee: "أنهيت تسميعي", finUndo: "إلغاء", yourSec: "هذا قسمك الحالي", optional: "التسميع اختياري", recorded: "سُجّل", dayDone: "وأنهيت يومك كاملًا 🎉", noPlan: "لم تضبط موضع حفظك بعد، فلا توجد مهام لليوم.", taskRead: "اقرأ", taskReview: "راجع", taskTasmee: "سمّع", taskAuto: "آلي", kahfSet: "تذكير سورة الكهف كل جمعة", kahfT: "جمعة مباركة", kahfH: "قال ﷺ: «مَنْ قَرَأَ سُورَةَ الْكَهْفِ يَوْمَ الْجُمُعَةِ أَضَاءَ لَهُ مِنَ النُّورِ مَا بَيْنَ الْجُمُعَتَيْنِ»", kahfSrc: "رواه الحاكم والبيهقي وصححه الألباني", kahfGo: "اقرأها الآن", kahfLater: "لاحقًا" },
+      mRead: "قراءة", mStudy: "حفظ", mReview: "مراجعة", mTasmee: "تسميع", today: "مهام اليوم", guide: "دليل التجويد", goto: "الانتقال إلى", hifzPos: "موضع حفظي", lastRead: "آخر قراءة", go: "اذهب", pageNo: "رقم الصفحة", rep: "التكرار", repAdd: "+١ تكرار", repHint: "كرّر الصفحة ٩ مرات للحفظ", repDone: "اكتملت ٩ تكرارات", ayah: "آية", robotDef: "المسمّع الآلي", micHintF: "اضغطي الميكروفون وسمّعي من حفظك",  showAll: "أظهر الكل", hideAll: "أخفِ الكل", nextAya: "الآية التالية", revealPage: "اكشف", okBtn: "بلا خطأ", badBtn: "أخطأت", lastTas: "آخر تسميع", tasOk: "بلا خطأ", tasBad: "بأخطاء", mic: "ابدأ", micStop: "إيقاف", from: "ابدأ من", micHint: "اضغط الميكروفون وسمّع من حفظك", listening: "أسمعك… ", words: "كلمة", errs: "أخطاء", stopped: "تم الإيقاف", doneOk: "أحسنت! أتممت الصفحة بلا أخطاء ✓", doneErr: "أتممت الصفحة، وعدد الأخطاء: %n", noSR: "متصفحك لا يدعم التعرّف على الصوت. جرّب Chrome، أو استخدم التسميع اليدوي.", micDenied: "لم يُسمح باستخدام الميكروفون. فعّله من إعدادات المتصفح.", srErr: "تعذّر التعرّف على الصوت. تحقق من الإنترنت.", prepText: "جارٍ تجهيز النص…", textFail: "تعذّر تحميل نص القرآن اللازم للتسميع الآلي.", finStudy: "أنهيت حفظي", finReview: "أنهيت مراجعتي", finTasmee: "أنهيت تسميعي", finUndo: "إلغاء", yourSec: "هذا قسمك الحالي", optional: "اختياري", recorded: "سُجّل", dayDone: "وأنهيت يومك كاملًا 🎉", noPlan: "لم تضبط موضع حفظك بعد، فلا توجد مهام لليوم.", taskRead: "اقرأ", taskReview: "راجع", taskTasmee: "سمّع", taskAuto: "آلي", kahfSet: "تذكير سورة الكهف كل جمعة", kahfT: "جمعة مباركة", kahfH: "قال ﷺ: «مَنْ قَرَأَ سُورَةَ الْكَهْفِ يَوْمَ الْجُمُعَةِ أَضَاءَ لَهُ مِنَ النُّورِ مَا بَيْنَ الْجُمُعَتَيْنِ»", kahfSrc: "رواه الحاكم والبيهقي وصححه الألباني", kahfGo: "اقرأها الآن", kahfLater: "لاحقًا" },
     en: { seg1: "Quran", seg2: "My Mushaf", back: "Back", search: "Search", settings: "Settings", juz: "Juz", page: "Page", ayah: "Verse",
       title: "Mushaf", sTitle: "Mushaf settings", colors: "Tajweed colours", bg: "Page background", paper: "Paper", white: "White", night: "Night", black: "Black",
       view: "Page view", full: "Whole page", scroll: "Full width", info: "Show page header and footer", awake: "Keep screen on", reset: "Reset", done: "Done",
@@ -28,7 +28,7 @@
       auto: "Auto", frame: "Frame colour", size: "Text size", lsp: "Line spacing", big: "Large", mid: "Medium", sml: "Small", tight: "Tight", norm: "Normal", loose: "Loose", none: "None",
       green: "Green", gold: "Gold", blue: "Blue", brown: "Brown", cream: "Cream", sand: "Sand", mint: "Mint", gray: "Gray",
       noteQ: "Qurani: for review, memorisation and recitation, with tajweed colours and your daily tasks.", noteM: "My Mushaf: for reading only, a full page on screen with search and settings.",
-      mRead: "Read", mStudy: "Memorize", mReview: "Review", mTasmee: "Recite", mAuto: "Auto", today: "Today's tasks", guide: "Tajweed guide", goto: "Go to", hifzPos: "My memorization spot", lastRead: "Last read", go: "Go", pageNo: "Page number", rep: "Repetitions", repAdd: "+1 rep", repHint: "9 to memorize, 30 to master", showAll: "Show all", hideAll: "Hide all", nextAya: "Next verse", revealPage: "Reveal page", okBtn: "No mistakes", badBtn: "Mistakes", lastTas: "Last recital", tasOk: "No mistakes", tasBad: "With mistakes", mic: "Start reciting", micStop: "Stop", from: "Start from", micHint: "Tap the mic and recite from memory", listening: "Listening… ", words: "words", errs: "Mistakes", stopped: "Stopped", doneOk: "Well done! Page completed with no mistakes ✓", doneErr: "Page completed. Mistakes: %n", noSR: "Your browser does not support speech recognition. Try Chrome, or use manual recital.", micDenied: "Microphone access was denied. Enable it in browser settings.", srErr: "Speech recognition failed. Check your connection.", prepText: "Preparing text…", textFail: "Could not load the Quran text needed for auto recital.", finStudy: "I finished memorizing", finReview: "I finished reviewing", finTasmee: "I finished reciting", finUndo: "Undo", yourSec: "your current section", optional: "recital is optional", recorded: "Recorded", dayDone: "and you finished your whole day 🎉", noPlan: "You have not set your memorization spot yet, so there are no tasks today.", taskRead: "Read", taskReview: "Review", taskTasmee: "Recite", taskAuto: "Auto", kahfSet: "Friday reminder for Surat Al-Kahf", kahfT: "Blessed Friday", kahfH: "The Prophet ﷺ said: whoever reads Surat Al-Kahf on Friday, a light will shine for him between the two Fridays.", kahfSrc: "Narrated by Al-Hakim and Al-Bayhaqi", kahfGo: "Read it now", kahfLater: "Later" }
+      mRead: "Read", mStudy: "Memorize", mReview: "Review", mTasmee: "Recite", today: "Today's tasks", guide: "Tajweed guide", goto: "Go to", hifzPos: "My memorization spot", lastRead: "Last read", go: "Go", pageNo: "Page number", rep: "Repetitions", repAdd: "+1 rep", repHint: "Repeat the page 9 times to memorize", repDone: "9 repetitions done", ayah: "Verse", robotDef: "Auto Reciter", micHintF: "Tap the mic and recite from memory",  showAll: "Show all", hideAll: "Hide all", nextAya: "Next verse", revealPage: "Reveal", okBtn: "No mistakes", badBtn: "Mistakes", lastTas: "Last recital", tasOk: "No mistakes", tasBad: "With mistakes", mic: "Start", micStop: "Stop", from: "Start from", micHint: "Tap the mic and recite from memory", listening: "Listening… ", words: "words", errs: "Mistakes", stopped: "Stopped", doneOk: "Well done! Page completed with no mistakes ✓", doneErr: "Page completed. Mistakes: %n", noSR: "Your browser does not support speech recognition. Try Chrome, or use manual recital.", micDenied: "Microphone access was denied. Enable it in browser settings.", srErr: "Speech recognition failed. Check your connection.", prepText: "Preparing text…", textFail: "Could not load the Quran text needed for auto recital.", finStudy: "I finished memorizing", finReview: "I finished reviewing", finTasmee: "I finished reciting", finUndo: "Undo", yourSec: "your current section", optional: "optional", recorded: "Recorded", dayDone: "and you finished your whole day 🎉", noPlan: "You have not set your memorization spot yet, so there are no tasks today.", taskRead: "Read", taskReview: "Review", taskTasmee: "Recite", taskAuto: "Auto", kahfSet: "Friday reminder for Surat Al-Kahf", kahfT: "Blessed Friday", kahfH: "The Prophet ﷺ said: whoever reads Surat Al-Kahf on Friday, a light will shine for him between the two Fridays.", kahfSrc: "Narrated by Al-Hakim and Al-Bayhaqi", kahfGo: "Read it now", kahfLater: "Later" }
   };
   var T = EN ? TX.en : TX.ar;
 
@@ -296,20 +296,26 @@
     ".mq-md svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}",
     ".mq-md[aria-pressed=true]{background:var(--mq-acc);color:#fff;opacity:1}",
     ".mq-modes{display:flex;gap:4px;margin-bottom:6px}",
-    ".mq-act{display:none;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:6px}.mq.tr .mq-act{display:flex}.mq.tr .mq-r1{display:none}",
-    ".mq-mid{flex:1;min-width:0;display:flex;gap:6px;justify-content:center;align-items:center;flex-wrap:wrap}",
-    ".mq .mq-b{padding:8px 12px;border:1px solid var(--mq-line);font-size:13.5px;font-weight:600;border-radius:12px;display:inline-flex;align-items:center;gap:6px;line-height:1.3}",
+    ".mq-act{display:none;align-items:center;gap:4px;flex-wrap:wrap;margin-bottom:4px}.mq.tr .mq-act{display:flex}.mq.tr .mq-r1{display:none}",
+    ".mq-mid{flex:1;min-width:0;display:flex;gap:4px;justify-content:center;align-items:center;flex-wrap:nowrap}.mq-act .mq-ic{width:34px;flex:none}",
+    ".mq .mq-b{padding:6px 9px;border:1px solid var(--mq-line);font-size:13px;font-weight:600;border-radius:12px;display:inline-flex;align-items:center;gap:6px;line-height:1.3}",
     ".mq .mq-b.p{background:var(--mq-acc);border-color:var(--mq-acc);color:#fff}",
     ".mq .mq-b.ok{border-color:#1e8a3c;color:#1e8a3c}.mq .mq-b.bad{border-color:#d93025;color:#d93025}",
     ".mq .mq-b svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}",
     ".mq-rp{font-size:13.5px}.mq-rp b{font-size:16px}",
     ".mq-mic.rec{animation:mqPulse 1.3s ease-in-out infinite}@keyframes mqPulse{50%{box-shadow:0 0 0 6px rgba(217,48,37,.28)}}",
     ".mq-as{flex-basis:100%;font-size:12.5px;line-height:1.6;text-align:center;opacity:.92;min-height:1.6em}.mq-as.bad{color:#d93025}.mq-as.warn{color:#c2410c}.mq-as.ok{color:#1e8a3c}",
-    ".mq-fin{display:none;align-items:center;justify-content:space-between;gap:8px;padding:6px 10px;margin-bottom:6px;border:1px solid var(--mq-line);border-radius:12px;font-size:13px}.mq-fin span{flex:1;min-width:0}",
+    ".mq-fin{display:none;align-items:center;justify-content:space-between;gap:8px;padding:4px 8px 4px 6px;margin-bottom:6px;border:1px solid var(--mq-line);border-radius:12px;font-size:13px}.mq-fin span{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}",
     ".mq .mq-act select{max-width:130px;padding:7px 8px;font-size:13px}",
     ".mq-top .mq-ic{width:40px}.mq-tt{cursor:pointer}.mq-tt small{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}",
     ".mq.tr.bars .mq-st{padding-top:var(--mq-th,0px);padding-bottom:var(--mq-bh,0px)}",
     ".mq.hid .mq-pg .aya-t:not(.rev) .qw{visibility:hidden}",
+    ".mq.hid .mq-pg .aya-t .qw.on{visibility:visible}",
+    ".mq-rb{display:none;align-items:center;gap:8px;margin-bottom:6px;padding:4px 8px;border:1px solid var(--mq-line);border-radius:14px}",
+    ".mq-rbi{flex:none;width:34px;height:34px}.mq-rbi .rb{width:34px;height:34px}",
+    ".mq-rbt{flex:1;min-width:0;display:flex;flex-direction:column;line-height:1.4}.mq-rbt b{font-size:13px}",
+    ".mq-rbt .mq-as{flex-basis:auto;min-height:0;font-size:11.5px;text-align:start}",
+    ".mq-rb select{max-width:78px;padding:6px 6px;font-size:12.5px}",
     ".mq.aut .mq-pg .qw:not(.mq-n):not(.on){visibility:hidden}",
     ".mq.hid .mq-pg .mq-n{cursor:pointer}",
     ".mq-pg .qw.x{background:rgba(217,48,37,.2);box-shadow:0 0 0 .1em rgba(217,48,37,.65);border-radius:.15em}",
@@ -354,9 +360,9 @@
       '<button type="button" class="mq-ic" id="mqSb" aria-label="' + T.search + '">' + ICON.search + '</button>' +
       '<button type="button" class="mq-ic" id="mqGb" aria-label="' + T.settings + '">' + ICON.set + '</button></div>';
     h += '<div class="mq-bar mq-bot" id="mqBot"><div class="mq-modes" id="mqMd" role="group">' +
-      [["read", T.mRead, ICON.read], ["study", T.mStudy, ICON.study], ["review", T.mReview, ICON.review], ["tasmee", T.mTasmee, ICON.tasmee], ["auto", T.mAuto, ICON.mic]].map(function (o) {
+      [["read", T.mRead, ICON.read], ["study", T.mStudy, ICON.study], ["review", T.mReview, ICON.review], ["tasmee", T.mTasmee, ICON.tasmee] ].map(function (o) {
         return '<button type="button" class="mq-md" data-m="' + o[0] + '" aria-pressed="' + (o[0] === "read") + '">' + o[2] + '<span>' + o[1] + '</span></button>'; }).join("") + '</div>' +
-      '<div class="mq-fin" id="mqFn"></div><div class="mq-act" id="mqAc"></div>' +
+      '<div class="mq-rb" id="mqRb"></div><div class="mq-fin" id="mqFn"></div><div class="mq-act" id="mqAc"></div>' +
       '<div class="mq-r1"><button type="button" class="mq-ic" id="mqPv" aria-label="' + T.prev + '">' + ICON.prev + '</button>' +
       '<select id="mqSs" aria-label="' + T.surah + '"></select><select id="mqSj" aria-label="' + T.juzSel + '"></select>' +
       '<button type="button" class="mq-ic" id="mqNx" aria-label="' + T.next + '">' + ICON.next + '</button></div></div>';
@@ -369,7 +375,7 @@
     stage = g("mqSt"); bodyEl = g("mqBd"); pageEl = g("mqPg"); tTitle = g("mqTt"); tSub = g("mqTs"); mJuz = g("mqJuz"); mSur = g("mqSurH"); mNum = g("mqNum");
     selS = g("mqSs"); selJ = g("mqSj"); shEl = g("mqSh"); seaEl = g("mqSea"); seaIn = g("mqSi"); seaCnt = g("mqCn"); seaLst = g("mqLs");
     palEl = el("style"); palEl.id = "mqPal"; D.head.appendChild(palEl);
-    topEl = g("mqTop"); botEl = g("mqBot"); modeEl = g("mqMd"); actEl = g("mqAc"); finEl = g("mqFn"); sh2 = g("mqSh2"); sh3 = g("mqSh3");
+    topEl = g("mqTop"); botEl = g("mqBot"); modeEl = g("mqMd"); actEl = g("mqAc"); finEl = g("mqFn"); rbEl = g("mqRb"); try { G.MRobot && G.MRobot.css && G.MRobot.css(); } catch (e) {} sh2 = g("mqSh2"); sh3 = g("mqSh3");
 
     var i, o;
     for (i = 1; i <= 114; i++) { o = el("option", "", num(i) + ". " + surahName(QV, i)); o.value = i; selS.appendChild(o); }
@@ -634,7 +640,9 @@
   }
 
   /* ===== المصحف الموحَّد: قراءة | حفظ | مراجعة | تسميع | آلي — في شريط واحد داخل شاشة المصحف ===== */
-  var M = "read", TASK = null, revSet = {}, topEl, botEl, modeEl, actEl, finEl, sh2, sh3, textQ = [], textBusy = false;
+  var M = "read", TASK = null, revSet = {}, topEl, botEl, modeEl, actEl, finEl, rbEl, sh2, sh3, textQ = [], textBusy = false;
+  function isRB() { return M === "review" || M === "tasmee"; }   /* في المراجعة والتسميع يظهر المسمّع الآلي */
+  function isF() { try { return G.MRobot && G.MRobot.who().g === "f"; } catch (e) { return false; } }
   var AU = { rec: null, active: false, E: null, W: null, eng: null, st: 0, pg: 0, mark: [], cons: {}, ac: null, bt: 0, tokOf: null, msg: "", cls: "", resume: false, tm: 0 };
   function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
   function A() { return G.S || null; }
@@ -645,23 +653,26 @@
     var a = A(); if (!a || !a.log) return null;
     var dn = a.log[todayKey()] || {}, pr = dn.pr || {}, id, c;
     for (id in pr) { if (dn[id] && pg >= pr[id][0] && pg <= pr[id][1] && (mode === "study" || id !== "new")) return { id: id, t: pr[id][2], lo: pr[id][0], hi: pr[id][1] }; }
-    c = (G.TK || []).filter(function (t) { return pg >= t.lo && pg <= t.hi; })[0];
-    return c ? { id: c.id, t: c.t, lo: c.lo, hi: c.hi } : null;
+    c = (G.TK || []).filter(function (t) { return t.pgs ? t.pgs.indexOf(pg) >= 0 : (pg >= t.lo && pg <= t.hi); })[0];
+    return c ? { id: c.id, t: c.t, lo: c.lo, hi: c.hi, pgs: c.pgs } : null;
   }
-  function hifzPage() { var a = A(); if (!a) return 0; return a.dir === "fwd" ? Math.min(604, Math.max(1, a.a + a.N - 1)) : Math.min(604, Math.max(1, a.b - a.N + 1)); }
+  /* الصفحة التالية داخل المهمة (قد لا تكون متتالية إن كان المحفوظ متفرقًا) */
+  function nextInTask(t, p) { var i, q; if (!t) return 0; if (t.pgs) { q = t.pgs.slice().sort(function (a, b) { return a - b; }); for (i = 0; i < q.length; i++) if (q[i] > p) return q[i]; return 0; } return p < t.hi ? p + 1 : 0; }
+  function hifzPage() { var a = A(); if (!a) return 0; if (G.MPlan) return G.MPlan.last() || 0; return a.dir === "fwd" ? Math.min(604, Math.max(1, a.a + a.N - 1)) : Math.min(604, Math.max(1, a.b - a.N + 1)); }
 
   /* ----- تبديل الأوضاع ----- */
   function setMode(m) {
     if (!ov) return;
-    if (M === "auto" && m !== "auto") autoStop(true);
+    autoStop(true); AU.eng = null; AU.pg = 0;
     M = m; revSet = {}; clearTimeout(AU.tm); AU.resume = false;
     var tr = m !== "read";
-    ov.classList.toggle("tr", tr); ov.classList.toggle("hid", m === "review" || m === "tasmee"); ov.classList.toggle("aut", m === "auto");
+    ov.classList.toggle("tr", tr); ov.classList.toggle("hid", m === "review" || m === "tasmee");
     [].forEach.call(modeEl.children, function (b) { b.setAttribute("aria-pressed", b.dataset.m === m ? "true" : "false"); });
     [].forEach.call(pageEl.querySelectorAll(".aya-t.rev,.qw.on,.qw.x"), function (x) { x.classList.remove("rev", "on", "x"); });
     if (tr) bars(true); else bars(true, 2800);
+    AU.msg = ""; AU.cls = "";
     trMeta();
-    if (m === "auto") { AU.pg = 0; autoPrepare(); }
+    if (isRB()) autoPrepare();
   }
   function trMeta() { if (!built) return; renderAct(); renderFin(); measure(); }
   function measure() {
@@ -674,7 +685,7 @@
   function trRender() {
     if (M === "read") return;
     Object.keys(revSet).forEach(function (k) { [].forEach.call(pageEl.querySelectorAll('.aya-t[data-a="' + k + '"]'), function (n) { n.classList.add("rev"); }); });
-    if (M === "auto") autoOnRender();
+    if (isRB()) autoOnRender();
     trMeta();
   }
 
@@ -693,41 +704,51 @@
   /* ----- شريط الإجراءات حسب الوضع ----- */
   function renderAct() {
     if (!actEl) return;
+    renderRb();
     if (M === "read") { actEl.innerHTML = ""; return; }
     var a = A(), pv = '<button type="button" class="mq-ic" data-a="pv" aria-label="' + T.prev + '">' + ICON.prev + "</button>",
       nx = '<button type="button" class="mq-ic" data-a="nx" aria-label="' + T.next + '">' + ICON.next + "</button>", mid = "", foot = "", q;
     if (M === "study") {
       var r = (a && a.rep && a.rep[cur]) || 0;
-      mid = '<span class="mq-rp" title="' + T.repHint + '">' + T.rep + " <b>" + num(r) + "</b> / " + num(30) + '</span><button type="button" class="mq-b p" data-a="rep">' + T.repAdd + "</button>";
+      mid = '<span class="mq-rp" title="' + T.repHint + '">' + (r >= 9 ? "✓ " + T.repDone : T.rep + " <b>" + num(r) + "</b> / " + num(9)) + '</span><button type="button" class="mq-b p" data-a="rep">' + T.repAdd + "</button>";
     } else if (M === "review") {
       mid = '<button type="button" class="mq-b p" data-a="nextaya">' + T.nextAya + '</button><button type="button" class="mq-b" data-a="toggleall">' + (allShown() ? T.hideAll : T.showAll) + "</button>";
     } else if (M === "tasmee") {
       mid = '<button type="button" class="mq-b" data-a="reveal">' + T.revealPage + '</button><button type="button" class="mq-b ok" data-a="ok">✓ ' + T.okBtn + '</button><button type="button" class="mq-b bad" data-a="bad">✗ ' + T.badBtn + "</button>";
       q = a && a.tas && a.tas[cur];
       if (q) foot = T.lastTas + ": " + (q.ok ? T.tasOk : T.tasBad);
-    } else if (M === "auto") {
-      var ops = "", i, seen = {};
-      if (AU.E && AU.pg === cur) AU.E.forEach(function (e, k) { if (!seen[e.key]) { seen[e.key] = 1; ops += '<option value="' + k + '"' + (k === AU.st ? " selected" : "") + ">" + (e.a === 1 && e.af ? T.ayah + " " + num(e.a) : (e.af ? "" : "↪ ") + T.ayah + " " + num(e.a)) + "</option>"; } });
-      mid = '<button type="button" class="mq-b p mq-mic' + (AU.active ? " rec" : "") + '" data-a="mic">' + ICON.mic + "<span>" + (AU.active ? T.micStop : T.mic) + "</span></button>" +
-        (ops ? '<select id="mqFr" aria-label="' + T.from + '">' + ops + "</select>" : "");
-      foot = "";
     }
-    actEl.innerHTML = pv + '<div class="mq-mid">' + mid + "</div>" + nx + (M === "auto" ? '<div class="mq-as ' + AU.cls + '" id="mqAs" role="status">' + esc(AU.msg) + "</div>" : (foot ? '<div class="mq-as">' + esc(foot) + "</div>" : ""));
+    actEl.innerHTML = pv + '<div class="mq-mid">' + mid + "</div>" + nx + (foot ? '<div class="mq-as">' + esc(foot) + "</div>" : "");
   }
+  /* المسمّع الآلي: الروبوت يظهر في المراجعة والتسميع، ويستمع إليك ويكشف الكلمات الصحيحة ويصفّر للخطأ */
+  function rbHint() { return isF() ? T.micHintF : T.micHint; }
+  function renderRb() {
+    if (!rbEl) return;
+    if (!isRB()) { rbEl.style.display = "none"; rbEl.innerHTML = ""; return; }
+    var R = G.MRobot, gg = "m", nm = T.robotDef, av = "🤖", ops = "", seen = {};
+    try { if (R) { gg = R.who().g; nm = R.name(gg); av = R.svg(gg, 40, AU.active ? "rb-live" : ""); } } catch (e) {}
+    if (AU.E && AU.pg === cur) AU.E.forEach(function (e, k) { if (!seen[e.key]) { seen[e.key] = 1; ops += '<option value="' + k + '"' + (k === AU.st ? " selected" : "") + ">" + (e.af ? "" : "↪ ") + T.ayah + " " + num(e.a) + "</option>"; } });
+    rbEl.style.display = "flex";
+    rbEl.innerHTML = '<div class="mq-rbi">' + av + '</div><div class="mq-rbt"><b>' + esc(nm) + '</b><span class="mq-as ' + AU.cls + '" id="mqAs" role="status">' + esc(AU.msg || rbHint()) + "</span></div>" +
+      (ops ? '<select id="mqFr" aria-label="' + T.from + '">' + ops + "</select>" : "") +
+      '<button type="button" class="mq-b p mq-mic' + (AU.active ? " rec" : "") + '" data-a="mic" aria-label="' + (AU.active ? T.micStop : T.mic) + '">' + ICON.mic + "<span>" + (AU.active ? T.micStop : T.mic) + "</span></button>";
+  }
+  function rbShake() { var sv = rbEl && rbEl.querySelector(".rb"); if (!sv) return; sv.classList.remove("rb-err"); void sv.getBoundingClientRect(); sv.classList.add("rb-err"); setTimeout(function () { sv.classList.remove("rb-err"); }, 520); }
+
   /* زر «أنهيت…» لقسم اليوم */
   function renderFin() {
     if (!finEl) return;
-    var a = A(), ts = M === "tasmee" || M === "auto", t = (M === "read" || !a) ? null : section(cur, ts ? "tasmee" : M);
+    var a = A(), ts = M === "tasmee", t = (M === "read" || !a) ? null : section(cur, ts ? "tasmee" : M);
     if (!t) { finEl.style.display = "none"; finEl.innerHTML = ""; measure(); return; }
     var dn = (a.log && a.log[todayKey()]) || {}, onv = ts ? !!(dn.ts && dn.ts[t.id]) : !!dn[t.id],
       lab = M === "study" ? T.finStudy : (M === "review" ? T.finReview : T.finTasmee);
     finEl.style.display = "flex";
     finEl.innerHTML = onv ? "<span>✓ " + T.recorded + " «" + esc(t.t) + "»" + (dn.all && !ts ? " — " + T.dayDone : "") + '</span><button type="button" class="mq-b" data-a="finundo">' + T.finUndo + "</button>"
-      : "<span><b>" + esc(t.t) + "</b> — " + (ts ? T.optional : T.yourSec) + '</span><button type="button" class="mq-b p" data-a="fin">' + lab + "</button>";
+      : "<span><b>" + esc(t.t) + "</b>" + (ts ? " <small>(" + T.optional + ")</small>" : "") + '</span><button type="button" class="mq-b p" data-a="fin">' + lab + "</button>";
     measure();
   }
   function finish(onv) {
-    var a = A(), ts = M === "tasmee" || M === "auto", t = a && section(cur, ts ? "tasmee" : M); if (!t) return;
+    var a = A(), ts = M === "tasmee", t = a && section(cur, ts ? "tasmee" : M); if (!t) return;
     var k = todayKey(), dn = a.log[k] || (a.log[k] = {});
     try {
       if (ts) { dn.ts = dn.ts || {}; dn.ts[t.id] = onv ? 1 : 0; G.save(); G.render(); }
@@ -759,7 +780,7 @@
     if (!a || !tk.length) h += '<p class="mq-note">' + T.noPlan + "</p>";
     else tk.forEach(function (t) {
       h += '<div class="mq-tk' + (dn[t.id] ? " done" : "") + '"><div class="mq-tkh"><span>' + (dn[t.id] ? "✓ " : "") + "<b>" + esc(t.t) + "</b></span><small>" + esc(t.s) + '</small></div><div class="mq-tkb">' +
-        [["study", T.taskRead], ["review", T.taskReview], ["tasmee", T.taskTasmee], ["auto", T.taskAuto]].map(function (b) { return '<button type="button" class="mq-b" data-tk="' + t.lo + "," + t.hi + "," + b[0] + '">' + b[1] + "</button>"; }).join("") + "</div></div>";
+        [["study", T.taskRead], ["review", T.taskReview], ["tasmee", T.taskTasmee]].map(function (b) { return '<button type="button" class="mq-b" data-tk="' + t.lo + "," + t.hi + "," + b[0] + '">' + b[1] + "</button>"; }).join("") + "</div></div>";
     });
     sh2.innerHTML = h + '<div class="mq-ft"><button type="button" class="p" data-x="1">' + T.done + "</button></div>";
   }
@@ -773,8 +794,8 @@
   }
 
   function wire2() {
-    actEl.addEventListener("click", onAct); finEl.addEventListener("click", onAct);
-    actEl.addEventListener("change", function (e) { if (e.target.id === "mqFr") { autoBuild(+e.target.value); autoStatus(true); renderAct(); } });
+    actEl.addEventListener("click", onAct); finEl.addEventListener("click", onAct); rbEl.addEventListener("click", onAct);
+    rbEl.addEventListener("change", function (e) { if (e.target.id === "mqFr") { autoBuild(+e.target.value); autoStatus(true); renderAct(); } });
     modeEl.addEventListener("click", function (e) { var b = e.target.closest("button"); if (!b) return; if (b.dataset.m !== M) setMode(b.dataset.m); });
     g("mqTk").addEventListener("click", function () { fillTasks(); showSheet(sh2); });
     g("mqGd").addEventListener("click", function () { if (typeof G.tjgOpen === "function") G.tjgOpen(); });
@@ -810,7 +831,7 @@
     if (AU.eng && AU.pg === cur) { if (cb) cb(); return; }
     setAs(T.prepText); renderAct();
     loadTextQ(function (ok) {
-      if (!on || M !== "auto") return;
+      if (!on || !isRB()) return;
       if (!ok) { setAs(T.textFail, "bad"); renderAct(); return; }
       if (!pageEl.querySelector(".qw")) return;          /* الصفحة لم تُرسم بعد: يعيد trRender المحاولة */
       autoBuild(0); autoStatus(true); renderAct(); if (cb) cb();
@@ -830,13 +851,13 @@
   function autoOnRender() {
     if (AU.eng && AU.pg === cur && AU.E) { AU.W = [].slice.call(pageEl.querySelectorAll(".qw:not(.mq-n)")); AU.W.length = Math.min(AU.W.length, AU.E.length); paintAuto(); return; }
     var was = AU.active || AU.resume; AU.eng = null; AU.resume = false;
-    autoPrepare(function () { if (was && on && M === "auto") autoStart(); });
+    autoPrepare(function () { if (was && on && isRB()) autoStart(); });
   }
   function autoStatus(force) {
     if (!AU.eng) return;
     if (!AU.active && !force) return;
     var done = Math.max(0, AU.eng.p - AU.st), total = Math.max(1, AU.E.length - AU.st);
-    setAs((AU.active ? T.listening : T.micHint) + (AU.active ? num(done) + " / " + num(total) + " " + T.words : "") + (AU.eng.err ? " · " + T.errs + " " + num(AU.eng.err) : ""), AU.eng.err ? "warn" : "");
+    setAs((AU.active ? T.listening : rbHint()) + (AU.active ? num(done) + " / " + num(total) + " " + T.words : "") + (AU.eng.err ? " · " + T.errs + " " + num(AU.eng.err) : ""), AU.eng.err ? "warn" : "");
   }
   function beep() {
     var n = Date.now(); if (n - AU.bt < 600) return; AU.bt = n;
@@ -884,19 +905,19 @@
       out.ev.forEach(function (v) {
         var w = AU.W[v.i]; AU.mark[v.i] = v.ok ? 1 : 2;
         if (w) { w.classList.add("on"); if (!v.ok) w.classList.add("x"); }
-        if (!v.ok) beep();
+        if (!v.ok) { beep(); rbShake(); }
       });
       if (AU.eng.done) { autoDone(); return; }
     }
     autoStatus(true);
   }
   function autoDone() {
-    var a = A(), errs = AU.eng.err, t;
+    var a = A(), errs = AU.eng.err, t, nx;
     autoStop(true);
-    if (a) { a.tas = a.tas || {}; a.tas[cur] = { d: todayKey(), ok: errs ? 0 : 1, a: 1, e: errs }; try { G.save(); } catch (x) {} }
+    if (a && M === "tasmee") { a.tas = a.tas || {}; a.tas[cur] = { d: todayKey(), ok: errs ? 0 : 1, a: 1, e: errs }; try { G.save(); } catch (x) {} }
     setAs(errs ? T.doneErr.replace("%n", num(errs)) : T.doneOk, errs ? "warn" : "ok"); renderAct(); renderFin();
-    t = section(cur, "tasmee");
-    if (t && cur < t.hi) { AU.resume = true; AU.tm = setTimeout(function () { if (on && M === "auto" && AU.resume) go(cur + 1); }, 1600); }
+    t = section(cur, M === "tasmee" ? "tasmee" : "review"); nx = nextInTask(t, cur);
+    if (nx) { AU.resume = true; AU.tm = setTimeout(function () { if (on && isRB() && AU.resume) go(nx); }, 1600); }
   }
 
   /* ----- ربط المصحف الموحَّد ببقية التطبيق ----- */
@@ -913,7 +934,7 @@
   }
   function openTask(lo, hi, m) {
     TASK = { lo: lo, hi: hi };
-    open(lo, { mode: (m === "study" || m === "review" || m === "tasmee" || m === "auto") ? m : "read" });
+    open(lo, { mode: (m === "study" || m === "review" || m === "tasmee") ? m : (m === "auto" ? "tasmee" : "read") });
   }
 
   /* ===== (قديم) خيارا الخانة: قرآني | مصحفي — لم يعد مستعملًا بعد الدمج ===== */
